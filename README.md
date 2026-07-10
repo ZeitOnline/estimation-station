@@ -1,77 +1,111 @@
-# test-learn-zeit-structure
+# Planning Poker (ZEIT)
 
-A deliberately tiny sandbox that mirrors the **ZEIT service structure** (like
-`wally` / `merkl`) so you can learn the moving parts and break things freely:
+A small **Planning Poker** tool for estimating tickets as a team, built on a
+readable mirror of the **ZEIT service structure** (like `wally` / `merkl`).
 
-- **Docker** — a multi-stage `Dockerfile` + `docker-compose.yml`
-- **SQL & views** — the API *is* SQL: tables in `public`, views/functions in
-  `api`, served over HTTP by **PostgREST**
-- **Migrations** — **Alembic**, with the ZEIT convention of a `.py` revision
-  that just runs a paired `.sql` file
-- **Your own Node server** — a hand-written Express app that renders a page
-  from the API
-- **k8s / k9s** — plain, readable manifests + a `Tiltfile`
+Open a room, share the number with the team, everyone picks an estimate, and the
+moderator reveals all cards at once — the classic "estimate together, no
+anchoring" flow. Access is gated behind ZEIT SSO so only the team can join.
+
+- **App** — a **SvelteKit** frontend (`frontend/`) with a built-in realtime
+  **WebSocket** layer for live rooms, presence, voting, and reveal/reset.
+- **Auth** — ZEIT SSO (Keycloak/OIDC), with an off/mock mode for local dev.
+- **Infra sandbox** — the same repo also inlines the ZEIT platform shapes so you
+  can learn them: **Docker**, **PostgREST + Postgres**, **Alembic** migrations,
+  and **k8s / Tilt**. (Estimation _history_ persistence is a planned use of this
+  stack — see the plan doc.)
+
+> **The product spec + roadmap live in
+> [`docs/estimation-poker-plan.md`](docs/estimation-poker-plan.md).**
+
+---
+
+## Run the app
+
+```sh
+cd frontend
+npm install
+npm run dev        # http://localhost:5173  (realtime WebSocket included)
+```
+
+Open http://localhost:5173 in two tabs (or two devices): create a room in one,
+join the same number in the other, vote, and let the moderator reveal.
+
+**Try it from your phone:** `npm run dev` binds to your network (`--host`), so
+open the **Network** URL it prints (e.g. `http://10.70.4.83:5173`) on a device on
+the same Wi‑Fi.
+
+### Auth modes
+
+Set in `frontend/.env` (see `frontend/.env.example`). Defaults to **off** so local
+dev just works:
+
+| `VITE_AUTH_MODE` | Behaviour                                                                                                                                         |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `off` (default)  | No login — type a display name.                                                                                                                   |
+| `mock`           | Simulate a logged-in ZEIT user (demo the SSO gate, no real login).                                                                                |
+| `oidc`           | Real ZEIT SSO. Verifies the token on the WebSocket and enforces who may join (email domain / Keycloak group). Needs a registered Keycloak client. |
+
+---
+
+## Architecture
+
+```
+                      ┌───────────────────────────────────┐
+   browser  ────────▶ │  frontend  (SvelteKit, :5173)      │   the Planning Poker app
+      │  HTTP + WS     │  ├─ pages: landing + /room/[id]    │
+      │                │  └─ realtime WebSocket (/poker-ws) │   live room state (in memory)
+      │                └───────────────────────────────────┘
+      │                        (optional / planned)
+      └────────────────────────────────┐
+                                        ▼
+   ┌──────────┐     SQL    ┌───────────┐        estimation history
+   │ postgres │ ◀───────── │ postgrest │        (reuses the sandbox below)
+   └──────────┘            └───────────┘
+```
+
+The realtime server used to be a standalone Node service; it now lives **inside**
+the SvelteKit app (`frontend/src/lib/server/poker/`) and is served on the same
+port — attached to Vite's server in dev and to a small custom Node entry
+(`build/server.js`) in production. Room state is in memory, so run a single
+replica. Details in the plan doc, §3/§7.
+
+---
+
+## The infra sandbox (Postgres / PostgREST / k8s)
+
+The repo also keeps a fully inlined "notes" stack so you can learn the ZEIT
+platform shapes without a black box: the API _is_ SQL (tables in `public`, views
+in the `api` schema served by **PostgREST**), migrations are **Alembic**, and
+everything ships as plain **k8s** manifests + a **Tiltfile**. This is the stack
+the Planning Poker _history_ feature will build on.
 
 > **How this differs from the real ZEIT repos:** wally/merkl pull their core
-> workloads from *remote* `github.com/ZeitOnline/kustomize` components, so the
-> actual Deployment YAML is hidden (and that repo is private). Here everything
-> is **inlined** so you can read and edit every line. Same shapes, no black box.
+> workloads from _remote_ `github.com/ZeitOnline/kustomize` components, so the
+> actual Deployment YAML is hidden. Here everything is **inlined** so you can read
+> and edit every line. Same shapes, no black box.
 
----
-
-## The architecture
-
-```
-        ┌──────────┐     HTTP      ┌───────────┐   SQL    ┌──────────┐
- you ─▶ │  node    │ ────────────▶ │ postgrest │ ───────▶ │ postgres │
-        │  :3001   │   (fetch)     │  :3000    │          │  :5432   │
-        └──────────┘               └───────────┘          └──────────┘
-         renders HTML          turns the `api` schema        tables live
-         (your server)         into a REST API               in `public`
-                                                                  ▲
-                                                          ┌──────────────┐
-                                                          │   migrator   │ runs once:
-                                                          │ (alembic +   │ migrations,
-                                                          │  auth/api.sql)│ then exits
-                                                          └──────────────┘
-```
-
-The key idea: **you never write REST handlers for data.** You write a Postgres
-`view` in `api/api.sql`, and PostgREST exposes it as `GET/POST/PATCH/DELETE`
-automatically. The Node server is only for pages/UI that call that API.
-
----
-
-## Run it — Option A: docker-compose (easiest)
+### Run the sandbox — docker-compose (easiest)
 
 ```sh
 docker compose up --build
 ```
 
-Then open:
-
-- **http://localhost:3001** — the page rendered by your Node server
+- **http://localhost:3001** — a page rendered by the Node server
 - **http://localhost:3000/notes** — the raw REST API (JSON)
 - **http://localhost:3000/rpc/health** — health function → `":-)"`
 
-Talk to the API directly:
-
 ```sh
-# list notes
-curl localhost:3000/notes
-
-# create one
+curl localhost:3000/notes                         # list
 curl -X POST localhost:3000/notes \
   -H 'Content-Type: application/json' \
-  -d '{"title":"Hello","body":"from curl"}'
-
-# the computed view
-curl localhost:3000/recent_notes
+  -d '{"title":"Hello","body":"from curl"}'        # create
+curl localhost:3000/recent_notes                   # a computed view
 ```
 
 Reset everything (fresh DB): `docker compose down -v && docker compose up --build`
 
-## Run it — Option B: Tilt + local k8s (to learn k8s / k9s)
+### Run the sandbox — Tilt + local k8s
 
 Needs a local cluster (`kind`, `minikube`, or Docker Desktop's k8s) and `tilt`.
 
@@ -79,51 +113,57 @@ Needs a local cluster (`kind`, `minikube`, or Docker Desktop's k8s) and `tilt`.
 tilt up          # dashboard at http://localhost:10350
 ```
 
-Or without Tilt, straight kubectl:
+Or straight kubectl:
 
 ```sh
 docker build --target migrator -t app/migrator .
 docker build --target node -t app/node .
 kubectl apply -k k8s/devel
-kubectl get pods -n learn        # or open k9s and point it at namespace `learn`
+kubectl get pods -n learn        # or open k9s on namespace `learn`
 ```
 
-Everything lands in the **`learn`** namespace — a perfect target to explore in
-`k9s`.
+The key idea: **you never write REST handlers for data.** You write a Postgres
+`view` in `api/api.sql` and PostgREST exposes it as `GET/POST/PATCH/DELETE`
+automatically.
 
 ---
 
-## The layout
+## Layout
 
 ```
+frontend/            the Planning Poker app (SvelteKit)
+  src/routes/          landing page + /room/[id]
+  src/lib/poker/       client room store, identity, vote summary
+  src/lib/server/poker/  realtime WebSocket: rooms + OIDC auth (in-memory)
+  src/lib/auth/        OIDC / session wiring
+docs/
+  estimation-poker-plan.md   product spec, roadmap, decisions
+
+# — infra sandbox —
 api/                 the SQL that defines everything
   schema.sql           tables (the `public` schema)
   api.sql              views + functions (the `api` schema PostgREST serves)
   auth.sql             database roles PostgREST logs in as
-migrations/          Alembic
-  migrate.sh           entrypoint: alembic upgrade + re-apply auth/api.sql
-  env.py               connects via PG* env vars
-  versions/            one <id>.py + <id>.sql per migration
-node/                your own server (Express)
-  server.js
-k8s/
-  base/                plain manifests: postgres, postgrest, migrator, node
-  devel/               overlay: namespace `learn` + image names
+migrations/          Alembic (migrate.sh: alembic upgrade + re-apply auth/api.sql)
+node/                a small Express server that renders a page from the API
+k8s/base + k8s/devel plain manifests + namespace/image overlay (`learn`)
 Dockerfile           multi-stage: targets `migrator`, `node`
-docker-compose.yml   wires the 4 services together
+docker-compose.yml   wires the sandbox services together
 Tiltfile             live k8s dev loop
 ```
 
 ---
 
-## Exercises (this is the point)
+## Sandbox exercises (learn the ZEIT structure)
 
 ### 1. Change a view — no backend code
-Edit `api/api.sql`, add `char_length(body) as length` to the `api.notes` view.
-Re-run migrations (`docker compose up migrator` again, or Tilt does it live),
-then `curl localhost:3000/notes` — the new field is just there.
+
+Edit `api/api.sql`, add `char_length(body) as length` to the `api.notes` view,
+re-run migrations (`docker compose up migrator`, or Tilt does it live), then
+`curl localhost:3000/notes` — the new field is just there.
 
 ### 2. Add a table + a migration
+
 1. Pick a revision id (12 hex chars), e.g. `a1b2c3d4e5f6`.
 2. Create `migrations/versions/a1b2c3d4e5f6_add_tags.sql` with your DDL:
    ```sql
@@ -134,21 +174,20 @@ then `curl localhost:3000/notes` — the new field is just there.
    );
    ```
 3. Create `migrations/versions/a1b2c3d4e5f6_add_tags.py` — copy an existing one
-   and set `revision = 'a1b2c3d4e5f6'`, `down_revision = '000000000000'` (the id
-   it builds on).
-4. Add a view in `api/api.sql`: `create or replace view api.tags as select * from public.tags;`
-   and grant access to `anon`.
+   and set `revision = 'a1b2c3d4e5f6'`, `down_revision = '000000000000'`.
+4. Add a view in `api/api.sql` and grant access to `anon`.
 5. Re-run the migrator. `curl localhost:3000/tags` works.
 
 > Alembic can also autogenerate ids: `cd migrations && alembic revision -m "add tags"`.
 
 ### 3. Break it on purpose
+
 Stop a container, corrupt a `.sql`, delete the postgres pod — then bring it back.
-Because storage is ephemeral, `down -v` (compose) or deleting the pod (k8s)
-always gives you a clean slate.
+Storage is ephemeral, so `down -v` (compose) or deleting the pod (k8s) always
+gives you a clean slate.
 
 ### 4. Level up (optional)
-- Add a `staff` role in `auth.sql`, make `anon` read-only in `api.sql`, and gate
-  writes behind a JWT (`PGRST_JWT_SECRET`) — this is how the real services do it.
-- Add a `staging/` overlay under `k8s/` that patches replicas/image tags.
-```
+
+- Gate writes behind a JWT (`PGRST_JWT_SECRET`) — how the real services do it.
+- Persist estimation history to a `history` table + PostgREST view (Plan §3/§8).
+- Add a `frontend` Docker target + k8s manifest to deploy the app (Plan §7).
