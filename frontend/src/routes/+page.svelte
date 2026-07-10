@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { Icon } from '$components';
 	import { getName, setName, isAuthenticatedMode } from '$lib/poker/identity';
@@ -33,13 +33,13 @@
 			error = 'Bitte gib eine Raumnummer ein.';
 			return;
 		}
-		goto(`${base}/room/${encodeURIComponent(id)}`);
+		goto(resolve('/room/[id]', { id: encodeURIComponent(id) }));
 	}
 
 	function create() {
 		if (!ensureName()) return;
 		const id = String(Math.floor(10000 + Math.random() * 90000)); // 5-digit room
-		goto(`${base}/room/${id}`);
+		goto(resolve('/room/[id]', { id }));
 	}
 </script>
 
@@ -84,7 +84,7 @@
 		margin-bottom: var(--z-ds-space-xxs, 0.25rem);
 	}
 	.hero p {
-		color: var(--z-ds-color-neutral-40, #666);
+		color: var(--z-ds-color-text-55, #69696c);
 		margin-bottom: var(--z-ds-space-l, 1.5rem);
 	}
 	.panel {
@@ -106,7 +106,7 @@
 	input {
 		flex: 1;
 		padding: var(--z-ds-space-xs, 0.5rem);
-		border: 1px solid var(--z-ds-color-neutral-80, #ccc);
+		border: 1px solid var(--z-ds-color-border-100, #cccccf);
 		border-radius: var(--z-ds-radius-s, 6px);
 		font: inherit;
 	}
@@ -118,21 +118,21 @@
 		padding: var(--z-ds-space-xs, 0.5rem) var(--z-ds-space-m, 1rem);
 		border: 0;
 		border-radius: var(--z-ds-radius-s, 6px);
-		background: var(--z-ds-color-neutral-10, #111);
-		color: var(--z-ds-color-neutral-100, #fff);
+		background: var(--z-ds-color-text-100, #252525);
+		color: var(--z-ds-color-background-0, #ffffff);
 		font: inherit;
 		cursor: pointer;
 	}
 	button.secondary {
-		background: var(--z-ds-color-neutral-90, #e5e5e5);
-		color: var(--z-ds-color-neutral-10, #111);
+		background: var(--z-ds-color-background-20, #dfdfe1);
+		color: var(--z-ds-color-text-100, #252525);
 	}
 	.or {
-		color: var(--z-ds-color-neutral-40, #999);
+		color: var(--z-ds-color-text-55, #69696c);
 		text-align: center;
 		margin: 0;
 	}
 	.error {
-		color: var(--z-ds-color-signal-error, #c0392b);
+		color: var(--z-ds-color-error-70, #bf4040);
 	}
 </style>

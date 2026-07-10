@@ -51,15 +51,15 @@
 		place-items: center;
 		font-size: var(--z-ds-font-size-l, 1.25rem);
 		font-weight: 600;
-		border: 1px solid var(--z-ds-color-neutral-80, #ccc);
+		border: 1px solid var(--z-ds-color-border-100, #cccccf);
 		border-radius: var(--z-ds-radius-m, 8px);
-		background: var(--z-ds-color-neutral-95, #f0f0f0);
+		background: var(--z-ds-color-background-10, #eeeeee);
 	}
 
 	.participant__seat--voted {
-		background: var(--z-ds-color-neutral-10, #111);
-		color: var(--z-ds-color-neutral-100, #fff);
-		border-color: var(--z-ds-color-neutral-10, #111);
+		background: var(--z-ds-color-text-100, #252525);
+		color: var(--z-ds-color-background-0, #ffffff);
+		border-color: var(--z-ds-color-text-100, #252525);
 	}
 
 	.participant__name {
@@ -70,6 +70,6 @@
 	.tag {
 		display: block;
 		font-size: 0.65rem;
-		color: var(--z-ds-color-neutral-40, #999);
+		color: var(--z-ds-color-text-55, #69696c);
 	}
 </style>

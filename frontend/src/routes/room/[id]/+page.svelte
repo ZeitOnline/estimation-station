@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { Card, Participants, Icon } from '$components';
 	import { createRoom } from '$lib/poker/room.svelte';
 	import { voteSummary } from '$lib/poker/summary';
@@ -23,7 +23,7 @@
 		const name = getName();
 		if (!name) {
 			// no name yet → go pick one on the landing page
-			goto(base || '/');
+			goto(resolve('/'));
 			return;
 		}
 		room.connect(data.roomId, getUserId(), name, getToken());
@@ -76,7 +76,7 @@
 </script>
 
 <header class="room-head">
-	<a class="back" href={base || '/'}><Icon name="arrow-left" size={14} /> Startseite</a>
+	<a class="back" href={resolve('/')}><Icon name="arrow-left" size={14} /> Startseite</a>
 	<div class="room-title">
 		<h1>Raum {data.roomId}</h1>
 		<button
@@ -92,9 +92,6 @@
 			</span>
 		</button>
 	</div>
-	<span class="status" class:status--on={room.connected}>
-		{room.connected ? 'verbunden' : 'getrennt…'}
-	</span>
 </header>
 
 {#if room.error}
@@ -148,46 +145,47 @@
 	}
 	.room-head h1 {
 		margin: 0;
+		font-size: var(--z-ds-font-size-l, 1.25rem);
 	}
 	.back {
 		display: inline-flex;
 		align-items: center;
 		gap: var(--z-ds-space-xxs, 0.35rem);
-		color: var(--z-ds-color-neutral-40, #666);
+		color: var(--z-ds-color-text-55, #69696c);
 		text-decoration: none;
 	}
 	.room-title {
 		display: flex;
 		align-items: center;
-		gap: var(--z-ds-space-s, 0.75rem);
 	}
 	.copy {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		padding: var(--z-ds-space-xxs, 0.35rem);
 		background: none;
 		border: 0;
 		border-radius: var(--z-ds-radius-s, 6px);
-		color: var(--z-ds-color-neutral-40, #666);
+		color: var(--z-ds-color-text-55, #69696c);
 		cursor: pointer;
 		transition: color 0.2s ease;
 	}
 	.copy:hover {
-		color: var(--z-ds-color-neutral-10, #111);
+		color: var(--z-ds-color-text-100, #252525);
 	}
 	.copy--done {
-		color: var(--z-ds-color-signal-success, #2e7d32);
+		color: var(--z-ds-color-background-success, #09864d);
 	}
 	/* Crossfade + scale between the link and checkmark icons on state switch. */
 	.copy__icons {
 		position: relative;
 		width: 1.25rem;
 		height: 1.25rem;
+		display: inline-flex;
+		align-items: center; 
+		justify-content: flex-end;
 	}
 	.copy__icon {
 		position: absolute;
-		inset: 0;
 		display: inline-flex;
 		transition:
 			opacity 0.2s ease,
@@ -205,21 +203,14 @@
 		opacity: 1;
 		transform: none;
 	}
-	.status {
-		font-size: var(--z-ds-font-size-xs, 0.8rem);
-		color: var(--z-ds-color-signal-error, #c0392b);
-	}
-	.status--on {
-		color: var(--z-ds-color-signal-success, #2e7d32);
-	}
 	.deck {
 		margin-bottom: var(--z-ds-space-xl, 2rem);
 	}
 	.cards {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--z-ds-space-s, 0.75rem);
-		margin-top: var(--z-ds-space-xl, 0.75rem);
+		gap: var(--z-ds-space-xl);
+		margin-top: var(--z-ds-space-xl);
 	}
 	.table__head {
 		display: flex;
@@ -230,7 +221,7 @@
 	}
 	.summary {
 		font-weight: 400;
-		color: var(--z-ds-color-neutral-30, #555);
+		color: var(--z-ds-color-text-70, #444444);
 	}
 	.controls {
 		display: flex;
@@ -245,8 +236,8 @@
 		padding: var(--z-ds-space-xs, 0.5rem) var(--z-ds-space-m, 1rem);
 		border: 0;
 		border-radius: var(--z-ds-radius-s, 6px);
-		background: var(--z-ds-color-neutral-10, #111);
-		color: var(--z-ds-color-neutral-100, #fff);
+		background: var(--z-ds-color-text-100, #252525);
+		color: var(--z-ds-color-background-0, #ffffff);
 		font: inherit;
 		cursor: pointer;
 	}
@@ -255,10 +246,10 @@
 		cursor: not-allowed;
 	}
 	button.secondary {
-		background: var(--z-ds-color-neutral-90, #e5e5e5);
-		color: var(--z-ds-color-neutral-10, #111);
+		background: var(--z-ds-color-background-20, #dfdfe1);
+		color: var(--z-ds-color-text-100, #252525);
 	}
 	.error {
-		color: var(--z-ds-color-signal-error, #c0392b);
+		color: var(--z-ds-color-error-70, #bf4040);
 	}
 </style>
