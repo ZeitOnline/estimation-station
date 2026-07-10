@@ -17,7 +17,7 @@ export type AuthMode = 'off' | 'mock' | 'oidc';
 export const AUTH_MODE: AuthMode = (import.meta.env.VITE_AUTH_MODE as AuthMode) || 'off';
 export const OIDC_AUTHORITY =
 	import.meta.env.VITE_OIDC_AUTHORITY || 'https://openid.zeit.de/realms/zeit-online';
-export const OIDC_CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID || 'planning-poker';
+export const OIDC_CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID || 'estimation-station';
 
 export interface SessionUser {
 	id: string;
