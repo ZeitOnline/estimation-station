@@ -38,12 +38,7 @@ COPY node/ ./
 EXPOSE 3001
 CMD ["npm", "start"]
 
-
-# --- realtime: planning-poker WebSocket server -------------------------------
-FROM node-base AS realtime
-WORKDIR /app
-COPY realtime/package.json realtime/package-lock.json* ./
-RUN npm install --omit=dev
-COPY realtime/ ./
-EXPOSE 8080
-CMD ["npm", "start"]
+# NOTE: the planning-poker realtime WebSocket server used to be its own target
+# here. It now lives inside the SvelteKit app (frontend/) and is served on the
+# same port as the app — see docs/estimation-poker-plan.md §3/§7. A production
+# `frontend` target is a future task (the app currently runs via `npm run dev`).

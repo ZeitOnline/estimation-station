@@ -5,23 +5,24 @@
 >
 > ### Running it
 > ```sh
-> # terminal 1 — realtime server (in-memory rooms) on :8080
-> cd realtime && npm install && npm start
->
-> # terminal 2 — SvelteKit frontend on :5173
+> # one terminal — SvelteKit frontend on :5173 (realtime WebSocket included)
 > cd frontend && npm install && npm run dev
 > ```
 > Open http://localhost:5173 in two tabs, create a room in one, join the same
 > number in the other, vote, moderator reveals.
 >
+> The realtime WebSocket server now lives **inside** the SvelteKit app (it used
+> to be a standalone `realtime/` service): the browser connects to the same
+> origin on `/poker-ws`. See §3 for how it's wired.
+>
 > ### Auth modes (Phase 2)
-> Both frontend and realtime default to **off** (no login) so local dev just
-> works. Three frontend modes via `VITE_AUTH_MODE` (see `frontend/.env.example`):
+> Auth defaults to **off** (no login) so local dev just works. Three modes via
+> `VITE_AUTH_MODE` (see `frontend/.env.example`):
 > - `off` — type a name (Phase 1).
 > - `mock` — simulate a logged-in ZEIT user; demo the gated UX without real SSO.
-> - `oidc` — real ZEIT SSO. Set `VITE_OIDC_CLIENT_ID` + run realtime with
->   `AUTH_MODE=oidc` (optionally `ALLOWED_EMAIL_DOMAINS=zeit.de` or
->   `ALLOWED_GROUP=planning-poker`). The realtime server verifies the JWT against
+> - `oidc` — real ZEIT SSO. Set `VITE_OIDC_CLIENT_ID` + start the frontend
+>   server with `AUTH_MODE=oidc` (optionally `ALLOWED_EMAIL_DOMAINS=zeit.de` or
+>   `ALLOWED_GROUP=planning-poker`). The WebSocket layer verifies the JWT against
 >   Keycloak's JWKS and enforces the allow-rule before letting a socket join.
 >
 > **External dependency to actually log in:** a Keycloak client (e.g.
@@ -29,9 +30,9 @@
 > with redirect URIs for `http://localhost:5173` (dev) + the deployed URL. Until
 > then, use `mock` mode to see the flow.
 >
-> Verified: `realtime` unit tests (15, incl. the allow-rule), off-mode + oidc-mode
-> WebSocket smoke tests (unauthenticated joins are rejected), `frontend`
-> check/test/build.
+> Verified: room + allow-rule unit tests (15, now vitest in `frontend/src/lib/
+> server/poker/`), off-mode + oidc-mode WebSocket smoke tests (unauthenticated
+> joins are rejected), `frontend` check/test/build.
 
 
 A real-time planning-poker tool for the team to estimate tickets, gated behind
@@ -86,33 +87,35 @@ Keycloak client) and WebSockets-through-the-gateway, not the app logic.
 
 ```
   browser ──▶ frontend (SvelteKit, adapter-node)          UI + OIDC login
-     │             │
-     │             └──▶ PostgREST :3000  ── Postgres      history/persistence (optional)
-     │
-     └────────── WebSocket ──▶ realtime (Node ws server)  live room state (in memory)
-                                    │
-                                    └── verifies the SSO token on connect
+     │             │  ├── HTTP  ── SvelteKit routes
+     │             │  └── WebSocket (/poker-ws) ─┐        live room state (in memory)
+     │             │                             └── verifies the SSO token on connect
+     │             └──▶ PostgREST :3000 ── Postgres       history/persistence (optional)
 ```
 
-**Three services** (two we already have, one new):
+**Two services** (both already in the repo):
 
-1. **`frontend/`** — the existing SvelteKit app. Add two routes:
+1. **`frontend/`** — the SvelteKit app. It serves:
    - `/` — create / join a room.
    - `/room/[id]` — the poker table.
+   - the realtime **WebSocket** on `/poker-ws` (same origin, same port).
    Handles OIDC login and opens the WebSocket.
 
-2. **`realtime/`** — **new** small Node WebSocket server (the core new piece).
-   Holds room state **in memory** (rooms are ephemeral — perfect for a daily
-   standup). Broadcasts the full room state on every change. Verifies the SSO
-   token when a socket connects and enforces the "who may join" rule.
-
-3. **`postgres` + `postgrest`** — *optional* persistence for estimation history
+2. **`postgres` + `postgrest`** — *optional* persistence for estimation history
    (which ticket got what final estimate, when). MVP can skip this entirely.
 
-> **Why a dedicated ws server and not PostgREST?** PostgREST is request/response
-> only — no push. The original Hatjitsu was a Node socket server for exactly
-> this reason. In-memory state on a single instance is more than enough for a
-> team; see §7 for the scaling note.
+> **Where the WebSocket runs.** It used to be a standalone `realtime/` Node
+> service on :8080. It's now folded into the SvelteKit app: a
+> `WebSocketServer({ noServer: true })` (`src/lib/server/poker/ws-server.ts`)
+> whose HTTP `upgrade` is attached to Vite's server in dev/preview (a plugin in
+> `vite.config.ts`) and to a custom Node entry (`src/server.ts` → `build/
+> server.js`) in production. The pure room logic (`rooms.ts`) and OIDC
+> verify/allow-rule (`auth.ts`) live next to it under `src/lib/server/poker/`.
+
+> **Why WebSockets and not PostgREST?** PostgREST is request/response only — no
+> push. The original Hatjitsu was a Node socket server for exactly this reason.
+> In-memory state on a single instance is more than enough for a team; see §7
+> for the scaling note.
 
 **Transport choice:** plain [`ws`](https://github.com/websockets/ws) (tiny, no
 magic) is recommended for learning; `socket.io` is the batteries-included
@@ -227,18 +230,23 @@ Cross-cutting: heartbeat ping/pong to detect drops; on disconnect mark
 
 ## 7. Deployment
 
-- **Dockerfile:** add a `realtime` target next to `node`/`migrator`.
-- **docker-compose:** add a `realtime` service; frontend gets
-  `PUBLIC_WS_URL=ws://localhost:<port>`.
-- **k8s:** add `k8s/base/realtime` (Deployment + Service). Two ws-specific
-  points:
-  - The gateway/ingress must allow the **WebSocket upgrade** (HTTPRoute is fine;
-    just no buffering/early close).
+The realtime WebSocket is part of the SvelteKit app, so there's **no separate
+realtime image/service** to deploy — it ships wherever the frontend ships. The
+production server is the custom entry `build/server.js` (`npm start`), which
+mounts adapter-node's handler and the WebSocket on one port.
+
+- **Dockerfile / docker-compose / Tilt / k8s:** the old `realtime` target,
+  service, workload, and Tilt resource have been removed. (The frontend itself
+  has no production deploy target yet — it runs via `npm run dev`; adding a
+  `frontend` Docker target + k8s manifest is a follow-up.)
+- Two ws-specific points still apply, now to the **frontend** server:
+  - The gateway/ingress must allow the **WebSocket upgrade** on `/poker-ws`
+    (HTTPRoute is fine; just no buffering/early close). If the app is served
+    under a base path (e.g. `/frontend`), the client connects to
+    `<base>/poker-ws` — keep that path un-stripped through the gateway.
   - Run **a single replica** (in-memory state). If you ever need >1, add Redis
     pub/sub or Postgres `LISTEN/NOTIFY` to share state + sticky sessions. Note
     this as a deliberate MVP limit, don't build it up front.
-- **Tilt:** add `docker_build` + `k8s_resource` for `realtime` with a port
-  forward, exactly like the existing `node` resource.
 
 ---
 
@@ -267,7 +275,9 @@ Cross-cutting: heartbeat ping/pong to detect drops; on disconnect mark
   moderator handoff; empty-room cleanup; consensus indicator.
 
 **Phase 4 — Deploy (1–2 days)**
-- Dockerfile target, compose, k8s manifests, ws-through-gateway, Tilt, logs.
+- Add a `frontend` Dockerfile target (build → `build/server.js`) + k8s manifest
+  (single replica), ws-through-gateway on `/poker-ws`, logs. The realtime piece
+  needs no service of its own — it's inside the frontend server.
 
 ---
 
@@ -287,8 +297,9 @@ Cross-cutting: heartbeat ping/pong to detect drops; on disconnect mark
 - Postgres + PostgREST + migrations (history persistence, allowlist).
 - SvelteKit frontend + `@zeitonline/design-system` (the UI shell).
 - Multi-stage Dockerfile pattern, docker-compose, k8s base/overlay, Tiltfile —
-  add one `realtime` service following the existing `node` service as a template.
+  a `frontend` target can follow the existing `node` service as a template.
 - wally's OIDC wrapper usage to copy verbatim.
 
-The **only genuinely new component** is the `realtime/` WebSocket server (~a few
-hundred lines). Everything else is assembling patterns already in place.
+The new real-time behaviour is a small WebSocket layer (~a few hundred lines)
+folded into the SvelteKit app (`src/lib/server/poker/`). Everything else is
+assembling patterns already in place.

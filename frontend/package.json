@@ -4,9 +4,10 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "NODE_ENV=development VITE_WS_URL=ws://localhost:8080 vite dev",
-		"build": "vite build",
+		"dev": "NODE_ENV=development vite dev --host",
+		"build": "vite build && node esbuild.server.js",
 		"preview": "vite preview",
+		"start": "node build/server.js",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"lint": "prettier --check . && eslint .",
 		"format": "prettier --write .",
@@ -16,9 +17,13 @@
 	},
 	"dependencies": {
 		"@zeitonline/design-system": "^0.4.1",
-		"oidc-client-ts": "^3.5.0"
+		"jose": "^6.2.3",
+		"oidc-client-ts": "^3.5.0",
+		"ws": "^8.18.0"
 	},
 	"devDependencies": {
+		"@types/ws": "^8.18.1",
+		"esbuild": "^0.28.0",
 		"@eslint/js": "^10.0.0",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.57.1",

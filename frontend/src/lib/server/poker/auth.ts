@@ -1,5 +1,5 @@
 // =============================================================================
-// auth.js — OIDC token verification + the "who may join" allow-rule.
+// auth.ts — OIDC token verification + the "who may join" allow-rule.
 // =============================================================================
 // Two independent pieces:
 //   1. verify()    — cryptographically checks the JWT against the Keycloak JWKS
@@ -8,22 +8,35 @@
 //   2. authorize() — a PURE decision on the *verified* claims: is this user
 //                    allowed in? By email domain and/or a group/role claim.
 //
-// Enabled only when AUTH_MODE=oidc (see server.js). Everything is env-driven so
-// no secrets live in code.
+// Enabled only when AUTH_MODE=oidc (see ws-server.ts). Everything is env-driven
+// so no secrets live in code.
 // =============================================================================
 
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+
+export interface AuthPolicy {
+	allowedDomains?: string[];
+	allowedGroup?: string;
+}
+
+interface KeycloakClaims extends JWTPayload {
+	email?: string;
+	name?: string;
+	preferred_username?: string;
+	groups?: string[];
+	realm_access?: { roles?: string[] };
+	resource_access?: Record<string, { roles?: string[] } | undefined>;
+}
 
 /**
  * Pure allow-rule. Given verified token claims and the configured policy,
  * decide whether the user may join. If no policy is configured, any validly
  * authenticated user is allowed (authentication-only).
- *
- * @param {object} claims  verified JWT payload
- * @param {{allowedDomains?: string[], allowedGroup?: string}} policy
- * @returns {{ok: boolean, reason?: string}}
  */
-export function authorize(claims, policy = {}) {
+export function authorize(
+	claims: KeycloakClaims,
+	policy: AuthPolicy = {}
+): { ok: boolean; reason?: string } {
 	const { allowedDomains = [], allowedGroup } = policy;
 
 	// No policy → authenticated is enough.
@@ -52,9 +65,9 @@ export function authorize(claims, policy = {}) {
 }
 
 /** Pick a stable, human display name from the token claims. */
-export function identityFromClaims(claims) {
+export function identityFromClaims(claims: KeycloakClaims): { userId: string; name: string } {
 	return {
-		userId: claims.sub,
+		userId: String(claims.sub),
 		name: claims.name || claims.preferred_username || claims.email || 'Anonym'
 	};
 }
@@ -62,18 +75,23 @@ export function identityFromClaims(claims) {
 /**
  * Build a token verifier bound to one issuer's JWKS. The remote key set is
  * fetched once and cached/rotated by jose.
- *
- * @param {{issuer: string, jwksUrl?: string, audience?: string}} cfg
- * @returns {(token: string) => Promise<object>} resolves to verified claims
  */
-export function makeVerifier({ issuer, jwksUrl, audience }) {
+export function makeVerifier({
+	issuer,
+	jwksUrl,
+	audience
+}: {
+	issuer: string;
+	jwksUrl?: string;
+	audience?: string;
+}): (token: string) => Promise<KeycloakClaims> {
 	const url = jwksUrl || `${issuer.replace(/\/$/, '')}/protocol/openid-connect/certs`;
 	const JWKS = createRemoteJWKSet(new URL(url));
-	return async function verify(token) {
+	return async function verify(token: string): Promise<KeycloakClaims> {
 		const { payload } = await jwtVerify(token, JWKS, {
 			issuer,
 			...(audience ? { audience } : {})
 		});
-		return payload;
+		return payload as KeycloakClaims;
 	};
 }

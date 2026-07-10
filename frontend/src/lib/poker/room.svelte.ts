@@ -1,9 +1,16 @@
 import { browser } from '$app/environment';
+import { base } from '$app/paths';
+import { WS_PATH } from '$lib/poker/ws-path';
 import type { Card, RoomState } from '$types';
 
-// Where the realtime server lives. Overridable at build time; sensible local
-// default. In Phase 4 this becomes a PUBLIC_ env var per environment.
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8080';
+// The realtime server now lives inside this SvelteKit app, so the WebSocket is
+// on the same origin (see src/lib/server/poker/ws-server.ts). `VITE_WS_URL`
+// stays as an optional override (e.g. pointing at a separate host).
+function wsUrl(): string {
+	if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
+	const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+	return `${proto}//${location.host}${base}${WS_PATH}`;
+}
 
 // Factory returning a reactive room client. Same shape idea as the ZEIT
 // `oidc` wrapper: a `$state` object with methods.
@@ -50,7 +57,7 @@ export function createRoom() {
 
 	function open() {
 		if (!browser) return;
-		socket = new WebSocket(WS_URL);
+		socket = new WebSocket(wsUrl());
 
 		socket.onopen = () => {
 			store.connected = true;

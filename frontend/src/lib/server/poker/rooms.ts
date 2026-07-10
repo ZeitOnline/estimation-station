@@ -1,24 +1,45 @@
 // =============================================================================
-// rooms.js — pure in-memory room/game logic (no sockets in here, so it's easy
-// to unit-test). The WebSocket wiring lives in server.js and calls into this.
+// rooms.ts — pure in-memory room/game logic (no sockets in here, so it's easy
+// to unit-test). The WebSocket wiring lives in ws-server.ts and calls into this.
+//
+// Ported from the standalone `realtime/` service. The serialized shape returned
+// by `serialize()` matches `RoomState` in $types; the internal Room/Participant
+// below keep the raw fields (vote/connected) the server needs.
 // =============================================================================
 
-export const DEFAULT_DECK = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, '?'];
+import type { Card, RoomState } from '../../../types';
+
+export const DEFAULT_DECK: Card[] = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, '?'];
 
 // How long an empty room (nobody connected) lingers before being swept.
 export const ROOM_TTL_MS = 1000 * 60 * 30; // 30 minutes
 
+export interface Participant {
+	userId: string;
+	name: string;
+	role: 'moderator' | 'voter' | 'observer';
+	vote: Card | null;
+	connected: boolean;
+}
+
+export interface Room {
+	id: string;
+	moderatorId: string;
+	ticket: string | null;
+	revealed: boolean;
+	deck: Card[];
+	participants: Map<string, Participant>;
+	lastActivity: number;
+}
+
 export class Rooms {
-	constructor() {
-		/** @type {Map<string, Room>} */
-		this.rooms = new Map();
-	}
+	private rooms = new Map<string, Room>();
 
 	/**
 	 * Join (or create) a room. First joiner of a fresh room becomes moderator.
 	 * Re-joining with the same userId keeps your identity and vote (reconnect).
 	 */
-	join(roomId, userId, name) {
+	join(roomId: string, userId: string, name?: string): Room {
 		let room = this.rooms.get(roomId);
 		if (!room) {
 			room = {
@@ -50,11 +71,11 @@ export class Rooms {
 		return room;
 	}
 
-	get(roomId) {
+	get(roomId: string): Room | null {
 		return this.rooms.get(roomId) ?? null;
 	}
 
-	vote(roomId, userId, card) {
+	vote(roomId: string, userId: string, card: Card): Room | null {
 		const room = this.rooms.get(roomId);
 		if (!room || room.revealed) return room ?? null;
 		const p = room.participants.get(userId);
@@ -66,27 +87,27 @@ export class Rooms {
 		return room;
 	}
 
-	reveal(roomId, userId) {
-		return this._moderatorAction(roomId, userId, (room) => {
+	reveal(roomId: string, userId: string): Room | null {
+		return this.moderatorAction(roomId, userId, (room) => {
 			room.revealed = true;
 		});
 	}
 
-	reset(roomId, userId) {
-		return this._moderatorAction(roomId, userId, (room) => {
+	reset(roomId: string, userId: string): Room | null {
+		return this.moderatorAction(roomId, userId, (room) => {
 			room.revealed = false;
 			for (const p of room.participants.values()) p.vote = null;
 		});
 	}
 
-	setTicket(roomId, userId, title) {
-		return this._moderatorAction(roomId, userId, (room) => {
+	setTicket(roomId: string, userId: string, title: string): Room | null {
+		return this.moderatorAction(roomId, userId, (room) => {
 			room.ticket = title || null;
 		});
 	}
 
 	/** Mark a participant disconnected. Hand off moderator if they left. */
-	disconnect(roomId, userId) {
+	disconnect(roomId: string, userId: string): Room | null {
 		const room = this.rooms.get(roomId);
 		if (!room) return null;
 		const p = room.participants.get(userId);
@@ -105,7 +126,7 @@ export class Rooms {
 	}
 
 	/** Remove rooms that have been empty (nobody connected) past the TTL. */
-	sweep(now = Date.now(), ttl = ROOM_TTL_MS) {
+	sweep(now = Date.now(), ttl = ROOM_TTL_MS): void {
 		for (const [id, room] of this.rooms) {
 			const anyoneConnected = [...room.participants.values()].some((p) => p.connected);
 			if (!anyoneConnected && now - room.lastActivity > ttl) {
@@ -118,7 +139,7 @@ export class Rooms {
 	 * Serialize a room for one recipient. Other people's votes are hidden until
 	 * `revealed` — you only see that they *have* voted. You always see your own.
 	 */
-	serialize(room, forUserId) {
+	serialize(room: Room, forUserId: string): RoomState {
 		return {
 			id: room.id,
 			moderatorId: room.moderatorId,
@@ -137,7 +158,7 @@ export class Rooms {
 		};
 	}
 
-	_moderatorAction(roomId, userId, fn) {
+	private moderatorAction(roomId: string, userId: string, fn: (room: Room) => void): Room | null {
 		const room = this.rooms.get(roomId);
 		if (!room || room.moderatorId !== userId) return room ?? null;
 		fn(room);
@@ -145,21 +166,3 @@ export class Rooms {
 		return room;
 	}
 }
-
-/**
- * @typedef {Object} Participant
- * @property {string} userId
- * @property {string} name
- * @property {'moderator'|'voter'|'observer'} role
- * @property {number|string|null} vote
- * @property {boolean} connected
- *
- * @typedef {Object} Room
- * @property {string} id
- * @property {string} moderatorId
- * @property {string|null} ticket
- * @property {boolean} revealed
- * @property {(number|string)[]} deck
- * @property {Map<string, Participant>} participants
- * @property {number} lastActivity
- */

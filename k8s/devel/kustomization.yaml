@@ -22,6 +22,3 @@ images:
   - name: app/node
     newName: app/node
     newTag: latest
-  - name: app/realtime
-    newName: app/realtime
-    newTag: latest

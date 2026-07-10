@@ -72,14 +72,7 @@ services:
     depends_on:
       - postgrest
 
-  # Planning-poker realtime server. Independent of the notes stack above —
-  # run just this one with:  docker compose up realtime
-  # The SvelteKit frontend (frontend/) connects here; run it with `npm run dev`.
-  realtime:
-    build:
-      context: .
-      target: realtime
-    environment:
-      PORT: "8080"
-    ports:
-      - "8080:8080"
+  # NOTE: the planning-poker realtime WebSocket server is no longer a separate
+  # service — it now lives inside the SvelteKit app (frontend/) and is served on
+  # the same port. Run the frontend with `cd frontend && npm run dev`; the
+  # browser connects to the WebSocket on the same origin (`/poker-ws`).

@@ -7,4 +7,3 @@ resources:
   - postgrest
   - migrator
   - node
-  - realtime
