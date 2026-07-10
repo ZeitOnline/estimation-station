@@ -1,0 +1,85 @@
+# =============================================================================
+# docker-compose.yml  —  the zero-friction "just run it" path.
+#
+#   docker compose up --build
+#
+# Brings up 4 services that mirror the k8s topology:
+#
+#   postgres  ->  the database (ephemeral: data is lost on `down -v` — good for
+#                 breaking things and starting fresh)
+#   migrator  ->  runs once, applies migrations + auth.sql + api.sql, then exits
+#   postgrest ->  turns the `api` schema into a REST API on :3000
+#   node      ->  your own server on :3001, renders a page from PostgREST
+#
+# Open http://localhost:3001  (page)   and   http://localhost:3000  (raw API)
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5432:5432"   # connect with: psql -h localhost -U app app  (pw: app)
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  migrator:
+    build:
+      context: .
+      target: migrator
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGDATABASE: app
+      PGUSER: app
+      PGPASSWORD: app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  postgrest:
+    image: postgrest/postgrest:v13.0.8
+    environment:
+      # PostgREST connects as `authenticator` (created in auth.sql).
+      PGRST_DB_URI: "postgres://authenticator:postgrest_pw@postgres:5432/app"
+      PGRST_DB_SCHEMA: api
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_OPENAPI_SERVER_PROXY_URI: "http://localhost:3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+
+  node:
+    build:
+      context: .
+      target: node
+    environment:
+      PORT: "3001"
+      API_BASE: "http://postgrest:3000"
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgrest
+
+  # Planning-poker realtime server. Independent of the notes stack above —
+  # run just this one with:  docker compose up realtime
+  # The SvelteKit frontend (frontend/) connects here; run it with `npm run dev`.
+  realtime:
+    build:
+      context: .
+      target: realtime
+    environment:
+      PORT: "8080"
+    ports:
+      - "8080:8080"

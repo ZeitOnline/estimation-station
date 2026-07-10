@@ -1,0 +1,14 @@
+{
+  "name": "learn-node-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Your own tiny Node server. Talks to PostgREST, renders a page.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

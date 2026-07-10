@@ -1,0 +1,16 @@
+{
+	"name": "realtime",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Planning-poker realtime WebSocket server (in-memory rooms)",
+	"scripts": {
+		"start": "node server.js",
+		"dev": "node --watch server.js",
+		"test": "node --test"
+	},
+	"dependencies": {
+		"jose": "^6.2.3",
+		"ws": "^8.18.0"
+	}
+}

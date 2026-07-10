@@ -1,0 +1,10 @@
+# The `base` bundles every component. Overlays (devel/, and later staging/,
+# production/) reference this and layer environment-specific tweaks on top.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - postgres
+  - postgrest
+  - migrator
+  - node
+  - realtime

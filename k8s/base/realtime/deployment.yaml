@@ -1,0 +1,28 @@
+# Planning-poker realtime WebSocket server.
+# NOTE: single replica on purpose — room state is in-memory (see
+# docs/estimation-poker-plan.md §7). Scaling out needs shared state + sticky
+# sessions; don't bump replicas without that.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: realtime
+  labels:
+    app: realtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: realtime
+  template:
+    metadata:
+      labels:
+        app: realtime
+    spec:
+      containers:
+        - name: realtime
+          image: app/realtime
+          env:
+            - name: PORT
+              value: "8080"
+          ports:
+            - containerPort: 8080

@@ -1,0 +1,27 @@
+# devel overlay: what you actually deploy to a local cluster (kind/minikube).
+# It puts everything in the `learn` namespace and maps the built image names.
+#
+# This is the file Tilt points at, and what you'd `kubectl apply -k k8s/devel`.
+# In a real ZEIT repo you'd also have staging/ and production/ overlays here.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: learn
+
+resources:
+  - namespace.yaml
+  - ../base
+
+# The base refers to image `app/migrator` and `app/node`; those names are what
+# the Dockerfile targets build. In a cloud setup you'd rewrite them to a
+# registry path here with `newName`.
+images:
+  - name: app/migrator
+    newName: app/migrator
+    newTag: latest
+  - name: app/node
+    newName: app/node
+    newTag: latest
+  - name: app/realtime
+    newName: app/realtime
+    newTag: latest
