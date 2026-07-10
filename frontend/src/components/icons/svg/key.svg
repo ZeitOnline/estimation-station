@@ -1,0 +1,5 @@
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <title>Schlüssel</title>
+    <circle cx="5.5" cy="9" r="3.75" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M9 9L13.5 9M16 9V13M16 9H13.5M16 9H17.5M13.5 9V12" stroke="currentColor" stroke-width="1.5"/>
+</svg>

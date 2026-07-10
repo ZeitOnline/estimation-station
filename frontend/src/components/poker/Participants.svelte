@@ -34,10 +34,10 @@
 	.participant {
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		align-items: flex-start;
 		gap: var(--z-ds-space-xxs, 0.25rem);
 		width: 4rem;
-		text-align: center;
+		text-align: left;
 	}
 
 	.participant--offline {

@@ -9,7 +9,7 @@
 
 import type { Card, RoomState } from '../../../types';
 
-export const DEFAULT_DECK: Card[] = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, '?'];
+export const DEFAULT_DECK: Card[] = [0, 1, 2, 3, 5, 8, 13, '?'];
 
 // How long an empty room (nobody connected) lingers before being swept.
 export const ROOM_TTL_MS = 1000 * 60 * 30; // 30 minutes

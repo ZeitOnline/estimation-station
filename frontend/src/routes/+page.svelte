@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
+	import { Icon } from '$components';
 	import { getName, setName, isAuthenticatedMode } from '$lib/poker/identity';
 
 	let name = $state('');
@@ -60,14 +61,20 @@
 	<label class="field">
 		<span>Raumnummer</span>
 		<div class="row">
-			<input bind:value={roomNumber} placeholder="Raumnummer" onkeydown={(e) => e.key === 'Enter' && join()} />
-			<button onclick={join}>Raum beitreten</button>
+			<input
+				bind:value={roomNumber}
+				placeholder="Raumnummer"
+				onkeydown={(e) => e.key === 'Enter' && join()}
+			/>
+			<button onclick={join}><Icon name="arrow-right" size={15} /> Raum beitreten</button>
 		</div>
 	</label>
 
 	<p class="or">oder</p>
 
-	<button class="secondary" onclick={create}>Neuen Raum erstellen</button>
+	<button class="secondary" onclick={create}
+		><Icon name="plus" size={16} /> Neuen Raum erstellen</button
+	>
 
 	{#if error}<p class="error">{error}</p>{/if}
 </div>
@@ -104,6 +111,10 @@
 		font: inherit;
 	}
 	button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--z-ds-space-xxs, 0.4rem);
 		padding: var(--z-ds-space-xs, 0.5rem) var(--z-ds-space-m, 1rem);
 		border: 0;
 		border-radius: var(--z-ds-radius-s, 6px);

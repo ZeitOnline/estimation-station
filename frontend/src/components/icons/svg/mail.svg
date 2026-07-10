@@ -1,0 +1,5 @@
+<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <title>Mail</title>
+    <path d="M2 3.75H16C16.1381 3.75 16.25 3.86193 16.25 4V14C16.25 14.1381 16.1381 14.25 16 14.25H2C1.86193 14.25 1.75 14.1381 1.75 14V4C1.75 3.86193 1.86193 3.75 2 3.75Z" stroke="currentColor" stroke-width="1.5"/>
+    <path d="M16 4L9 10L2 4" stroke="currentColor" stroke-width="1.5"/>
+</svg>

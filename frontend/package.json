@@ -13,17 +13,17 @@
 		"format": "prettier --write .",
 		"test": "npm run test:unit -- --run",
 		"test:unit": "vitest",
-		"copy:zds": "cp node_modules/@zeitonline/design-system/design-system.css ./src/lib/styles/styles-zds.css"
+		"copy:zds": "cp node_modules/@zeitonline/design-system/design-system.css ./src/lib/styles/styles-zds.css",
+		"copy:icons": "rm -rf ./src/components/icons/svg && cp -r node_modules/@zeitonline/icons/svg ./src/components/icons/svg"
 	},
 	"dependencies": {
 		"@zeitonline/design-system": "^0.4.1",
+		"@zeitonline/icons": "^0.1.9",
 		"jose": "^6.2.3",
 		"oidc-client-ts": "^3.5.0",
 		"ws": "^8.18.0"
 	},
 	"devDependencies": {
-		"@types/ws": "^8.18.1",
-		"esbuild": "^0.28.0",
 		"@eslint/js": "^10.0.0",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.57.1",
@@ -31,6 +31,8 @@
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/svelte": "^5.3.1",
 		"@types/node": "^25.0.0",
+		"@types/ws": "^8.18.1",
+		"esbuild": "^0.28.0",
 		"eslint": "^10.0.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.15.2",

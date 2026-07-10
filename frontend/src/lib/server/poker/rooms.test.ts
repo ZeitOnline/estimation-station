@@ -85,12 +85,12 @@ describe('Rooms', () => {
 	it('reconnect keeps identity and vote', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');
-		rooms.vote('r1', 'alice', 21);
+		rooms.vote('r1', 'alice', 13);
 		rooms.disconnect('r1', 'alice');
 		rooms.join('r1', 'alice', 'Alice'); // reconnect
 		const p = rooms.get('r1')!.participants.get('alice')!;
 		expect(p.connected).toBe(true);
-		expect(p.vote).toBe(21);
+		expect(p.vote).toBe(13);
 	});
 
 	it('sweep removes empty rooms past TTL', () => {

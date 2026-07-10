@@ -50,7 +50,7 @@ OIDC approach.
   room number with the team.
 
 **Room page**
-- A **deck** of cards (default Fibonacci: `0 1 2 3 5 8 13 21 34 55 89 ?`).
+- A **deck** of cards (default: `0 1 2 3 5 8 13 ?` — a short Fibonacci scale).
 - Each person picks a card = their estimate. Votes stay **hidden** ("You
   haven't estimated yet" / face-down cards for others).
 - Moderator can **Reveal** (flip everyone's cards at once) and **Reset** (clear
