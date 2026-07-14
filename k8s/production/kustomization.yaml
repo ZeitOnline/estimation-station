@@ -6,18 +6,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: learn
+namespace: estimation-station
 
 resources:
   - ../base
-
-# The base refers to image `app/migrator` and `app/node`; those names are what
-# the Dockerfile targets build. In a cloud setup you'd rewrite them to a
-# registry path here with `newName`.
-images:
-  - name: app/migrator
-    newName: app/migrator
-    newTag: latest
-  - name: app/node
-    newName: app/node
-    newTag: latest
