@@ -9,7 +9,6 @@ kind: Kustomization
 namespace: learn
 
 resources:
-  - namespace.yaml
   - ../base
 
 # The base refers to image `app/migrator` and `app/node`; those names are what
