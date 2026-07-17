@@ -30,6 +30,7 @@ jobs:
     uses: zeitonline/gh-action-workflows/.github/workflows/build-test-push.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
     secrets: inherit
     with:
+      service: frontend
       targets: nodejs
       versions: k8s/staging/versions
   # with release: promote images to 'production' and notify
