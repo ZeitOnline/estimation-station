@@ -36,4 +36,4 @@ COPY --from=build /app/package.json ./package.json
 EXPOSE 3000
 # Run as the image's built-in non-root user (required by most k8s policies).
 USER node
-CMD ["node", "build/server.js"]
+ENTRYPOINT ["node", "build/server.js"]

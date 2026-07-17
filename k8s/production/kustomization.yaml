@@ -1,12 +1,26 @@
-# devel overlay: what you actually deploy to a local cluster (kind/minikube).
-# It puts everything in the `learn` namespace and maps the built image names.
-#
-# This is the file Tilt points at, and what you'd `kubectl apply -k k8s/devel`.
-# In a real ZEIT repo you'd also have staging/ and production/ overlays here.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 namespace: estimation-station
 
 resources:
-  - ../base
+  - ../base/nodejs
+  - ../base/gateway
+
+components:
+  - versions
+  - ../base/registry
+
+replicas:
+  - name: nodejs
+    count: 1
+
+patches:
+  - target:
+      kind: HTTPRoute
+      group: gateway.networking.k8s.io
+      name: api
+    patch: |-
+      - op: replace
+        path: /spec/hostnames/0
+        value: estimation-station.zon.zeit.de

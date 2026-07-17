@@ -13,11 +13,6 @@ const config = {
 			$components: './src/components',
 			$types: './src/types'
 		},
-		// In production the app is served under a sub-path (like wortgeflecht's
-		// `/wortgeflecht`); in dev it lives at `/`.
-		paths: {
-			base: !dev ? '/frontend' : ''
-		},
 		// adapter-node builds a standalone Node server (build/index.js) — this is
 		// the "own node server" SvelteKit gives you for free.
 		adapter: adapter({
