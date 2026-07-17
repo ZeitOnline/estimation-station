@@ -27,6 +27,7 @@ RUN npm run build
 RUN npm prune --omit=dev
 
 FROM frontend-builder AS frontend-testing
+RUN npm ci
 ENTRYPOINT npm run test
 
 # --- runtime: just Node + the build output + production deps ------------------
