@@ -38,15 +38,17 @@ the same Wi‑Fi.
 ### Auth
 
 Login is always on (like bitpoll): the app renders nothing but a login button
-until you sign in with your ZEIT account. It uses the Keycloak client
-`estimation-station` against `https://openid.zeit.de/realms/zeit-online`
-(wired up in `frontend/src/routes/+layout.svelte`, wrapper in
-`frontend/src/lib/auth/oidc.svelte.ts`). Your dev/prod origin must be a
-registered redirect URI on that client.
+until you sign in with your ZEIT account. It uses
+[`@zeitonline/svelte-oidc`](https://github.com/zeitonline/svelte-oidc) with the
+Keycloak client `estimation-station` against
+`https://openid.zeit.de/realms/zeit-online` — wired up in
+`frontend/src/routes/+layout.svelte`. Your dev/prod origin must be a registered
+redirect URI on that client.
 
 Server-side, set `AUTH_MODE=oidc` (plain env, not `VITE_`) to also verify the
 bearer token on the WebSocket and enforce who may join (email domain /
-Keycloak group) — see `frontend/.env.example`.
+Keycloak group) — see `frontend/src/lib/server/poker/auth.ts`.
+
 ---
 
 ## Architecture

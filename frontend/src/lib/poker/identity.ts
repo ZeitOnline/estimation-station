@@ -1,4 +1,4 @@
-import { oidc } from '$lib/auth/oidc.svelte';
+import { oidc } from '@zeitonline/svelte-oidc';
 
 // Identity comes from the OIDC session. The whole app is rendered behind the
 // login gate in +layout.svelte, so by the time these are called a user is

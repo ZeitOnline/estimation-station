@@ -3,14 +3,15 @@
 	import { onMount } from 'svelte';
 	import { ZeitLogo } from '$components';
 	import { resolve } from '$app/paths';
-	import { oidc } from '$lib/auth/oidc.svelte';
+	import { oidc } from '@zeitonline/svelte-oidc';
 
 	let { children }: { children: () => ReturnType<import('svelte').Snippet> } = $props();
 
 	onMount(() => {
 		oidc.manage({
 			authority: 'https://openid.zeit.de/realms/zeit-online',
-			client_id: 'estimation-station'
+			client_id: 'estimation-station',
+			redirect_uri: window.location.origin
 		});
 	});
 </script>
