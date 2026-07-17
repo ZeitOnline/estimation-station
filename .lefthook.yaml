@@ -1,0 +1,7 @@
+pre-commit:
+  parallel: true
+  commands:
+    biome:
+      glob: "*.{js,jsx}"
+      root: frontend/
+      run: npm --yes exec biome -- lint --no-errors-on-unmatched {staged_files}

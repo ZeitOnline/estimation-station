@@ -1,0 +1,11 @@
+name: Check code issues
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - 'main'
+jobs:
+  commitlint:
+    uses: zeitonline/gh-action-workflows/.github/workflows/commit-lint.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
+  linter:
+    uses: zeitonline/gh-action-workflows/.github/workflows/lefthook.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0

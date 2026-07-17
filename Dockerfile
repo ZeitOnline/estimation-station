@@ -10,8 +10,10 @@
 #   docker run -p 3000:3000 app/frontend      # → http://localhost:3000/frontend
 # =============================================================================
 
+FROM node:lts-slim@sha256:b31e7a42fdf8b8aa5f5ed477c72d694301273f1069c5a2f71d53c6482e99a2fc AS node
+
 # --- build: install ALL deps and produce build/ (incl. build/server.js) ------
-FROM node:22-slim AS build
+FROM node AS frontend-builder
 WORKDIR /app
 # Copy manifests first so `npm ci` is cached until dependencies actually change.
 COPY frontend/package.json frontend/package-lock.json ./
@@ -24,15 +26,18 @@ RUN npm run build
 # *external* (ws, jose) are actually needed at runtime.
 RUN npm prune --omit=dev
 
+FROM frontend-builder AS frontend-testing
+ENTRYPOINT npm run test
+
 # --- runtime: just Node + the build output + production deps ------------------
-FROM node:22-slim AS frontend
+FROM node AS frontend
 WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0
-COPY --from=build /app/build ./build
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/package.json ./package.json
+COPY --from=frontend-builder /app/build ./build
+COPY --from=frontend-builder /app/node_modules ./node_modules
+COPY --from=frontend-builder /app/package.json ./package.json
 EXPOSE 3000
 # Run as the image's built-in non-root user (required by most k8s policies).
 USER node

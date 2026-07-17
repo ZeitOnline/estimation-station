@@ -1,0 +1,20 @@
+---
+name: Test frontend
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches-ignore:
+      - 'main'
+    paths:
+      - '.github/workflows/frontend-tests.yaml'
+      - '.dockerignore'
+      - 'Dockerfile'
+      - 'frontend/**'
+      - 'testing.yaml'
+jobs:
+  build:
+    uses: zeitonline/gh-action-workflows/.github/workflows/build-test-push.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
+    with:
+      service: frontend
+      artifacts: build
