@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "03af5bb6012aded05aaafa9e016456f2ba7d7857",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "k8s/production/versions/kustomization.yaml"
+        }
+      ],
+      "include-v-in-tag": false
+    }
+  }
+}
