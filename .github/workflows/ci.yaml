@@ -11,7 +11,10 @@ jobs:
   linter:
     uses: zeitonline/gh-action-workflows/.github/workflows/lefthook.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
     with:
-      setup-command: "true"   # no setup needed
+      node-version: "lts/*"
+      setup-command: |
+        cd frontend/
+        npm install
   k8s:
     uses: zeitonline/gh-action-workflows/.github/workflows/k8s-validation.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
   # run 'release-please' first

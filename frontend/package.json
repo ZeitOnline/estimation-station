@@ -17,9 +17,11 @@
 		"copy:icons": "rm -rf ./src/components/icons/svg && cp -r node_modules/@zeitonline/icons/svg ./src/components/icons/svg"
 	},
 	"dependencies": {
+		"@biomejs/biome": "^2.5.4",
 		"@zeitonline/design-system": "^0.4.1",
 		"@zeitonline/icons": "^0.1.9",
 		"jose": "^6.2.3",
+		"lefthook": "^2.1.10",
 		"oidc-client-ts": "^3.5.0",
 		"ws": "^8.18.0"
 	},
