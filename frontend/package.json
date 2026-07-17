@@ -21,7 +21,6 @@
 		"@zeitonline/design-system": "^0.4.1",
 		"@zeitonline/icons": "^0.1.9",
 		"jose": "^6.2.3",
-		"lefthook": "^2.1.10",
 		"oidc-client-ts": "^3.5.0",
 		"ws": "^8.18.0"
 	},
