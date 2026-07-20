@@ -9,9 +9,7 @@ export interface Summary {
 // Compute the stats shown after a reveal. Pure function → easy to unit-test.
 export function voteSummary(participants: Participant[]): Summary {
 	const voted = participants.filter((p) => p.vote !== null);
-	const numeric = voted
-		.map((p) => p.vote)
-		.filter((v): v is number => typeof v === 'number');
+	const numeric = voted.map((p) => p.vote).filter((v): v is number => typeof v === 'number');
 
 	const count = numeric.length;
 	const average = count ? numeric.reduce((a, b) => a + b, 0) / count : null;
