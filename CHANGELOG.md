@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/ZeitOnline/estimation-station/compare/0.2.0...0.3.0) (2026-07-20)
+
+
+### Features
+
+* add health check route and probes to deployment ([#4](https://github.com/ZeitOnline/estimation-station/issues/4)) ([76691f4](https://github.com/ZeitOnline/estimation-station/commit/76691f4f39af80b5fcdf295edf3aad8d7b88c29f))
+* implement OIDC authentication and remove legacy auth modes ([#2](https://github.com/ZeitOnline/estimation-station/issues/2)) ([f83f73e](https://github.com/ZeitOnline/estimation-station/commit/f83f73e3996111730a566e41e7e4dc403a4f97da))
+
 ## [0.2.0](https://github.com/ZeitOnline/estimation-station/compare/0.1.1...0.2.0) (2026-07-17)
 
 
