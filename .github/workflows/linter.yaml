@@ -12,6 +12,6 @@ jobs:
     with:
       node-version: "lts/*"
       setup-command: |
-        uv sync --active --frozen --only-group lint
+        uv tool install lefthook
         cd frontend/
         npm install
