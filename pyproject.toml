@@ -1,0 +1,10 @@
+[project]
+name = "estimation-station"
+version = "0.2.0"
+description = "Estimation poker"
+requires-python = ">=3.12"
+
+[dependency-groups]
+lint = [
+    "lefthook",
+]

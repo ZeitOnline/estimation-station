@@ -1,6 +1,9 @@
 # Node
 /frontend/node_modules/
 
+# Python
+/.venv/
+
 # k8s
 /k8s/*/gke_gcloud_auth_plugin_cache
 
