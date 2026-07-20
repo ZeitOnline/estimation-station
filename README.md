@@ -35,16 +35,19 @@ join the same number in the other, vote, and let the moderator reveal.
 open the **Network** URL it prints (e.g. `http://10.70.4.83:5173`) on a device on
 the same Wi‑Fi.
 
-### Auth modes
+### Auth
 
-Set in `frontend/.env` (see `frontend/.env.example`). Defaults to **off** so local
-dev just works:
+Login is always on (like bitpoll): the app renders nothing but a login button
+until you sign in with your ZEIT account. It uses
+[`@zeitonline/svelte-oidc`](https://github.com/zeitonline/svelte-oidc) with the
+Keycloak client `estimation-station` against
+`https://openid.zeit.de/realms/zeit-online` — wired up in
+`frontend/src/routes/+layout.svelte`. Your dev/prod origin must be a registered
+redirect URI on that client.
 
-| `VITE_AUTH_MODE` | Behaviour                                                                                                                                         |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `off` (default)  | No login — type a display name.                                                                                                                   |
-| `mock`           | Simulate a logged-in ZEIT user (demo the SSO gate, no real login).                                                                                |
-| `oidc`           | Real ZEIT SSO. Verifies the token on the WebSocket and enforces who may join (email domain / Keycloak group). Needs a registered Keycloak client. |
+Server-side, set `AUTH_MODE=oidc` (plain env, not `VITE_`) to also verify the
+bearer token on the WebSocket and enforce who may join (email domain /
+Keycloak group) — see `frontend/src/lib/server/poker/auth.ts`.
 
 ---
 

@@ -20,6 +20,7 @@
 		"@biomejs/biome": "^2.5.4",
 		"@zeitonline/design-system": "^0.4.1",
 		"@zeitonline/icons": "^0.1.9",
+		"@zeitonline/svelte-oidc": "github:zeitonline/svelte-oidc",
 		"jose": "^6.2.3",
 		"oidc-client-ts": "^3.5.0",
 		"ws": "^8.18.0"

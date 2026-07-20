@@ -3,31 +3,17 @@
 	import { resolve } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { Icon } from '$components';
-	import { getName, setName, isAuthenticatedMode } from '$lib/poker/identity';
+	import { getName } from '$lib/poker/identity';
 
 	let name = $state('');
 	let roomNumber = $state('');
 	let error = $state('');
 
-	// In mock/oidc mode the name comes from the account; only `off` mode asks.
-	const asksForName = !isAuthenticatedMode();
-
 	onMount(() => {
 		name = getName();
 	});
 
-	function ensureName(): boolean {
-		if (!asksForName) return true;
-		if (!name.trim()) {
-			error = 'Bitte gib deinen Namen ein.';
-			return false;
-		}
-		setName(name.trim());
-		return true;
-	}
-
 	function join() {
-		if (!ensureName()) return;
 		const id = roomNumber.trim();
 		if (!id) {
 			error = 'Bitte gib eine Raumnummer ein.';
@@ -37,7 +23,6 @@
 	}
 
 	function create() {
-		if (!ensureName()) return;
 		const id = String(Math.floor(10000 + Math.random() * 90000)); // 5-digit room
 		goto(resolve('/room/[id]', { id }));
 	}
@@ -49,14 +34,7 @@
 </header>
 
 <div class="panel">
-	{#if asksForName}
-		<label class="field">
-			<span>Dein Name</span>
-			<input bind:value={name} placeholder="z. B. Manuel" />
-		</label>
-	{:else}
-		<p class="field">Angemeldet als <strong>{name}</strong></p>
-	{/if}
+	<p class="field">Angemeldet als <strong>{name}</strong></p>
 
 	<label class="field">
 		<span>Raumnummer</span>

@@ -3,30 +3,17 @@
 	import { onMount } from 'svelte';
 	import { ZeitLogo } from '$components';
 	import { resolve } from '$app/paths';
-	import { oidc } from '$lib/auth/oidc.svelte';
-	import { auth, initAuth, login, AUTH_MODE } from '$lib/auth/session.svelte';
+	import { oidc } from '@zeitonline/svelte-oidc';
 
 	let { children }: { children: () => ReturnType<import('svelte').Snippet> } = $props();
 
-	onMount(initAuth);
-
-	// Mirror the oidc wrapper's reactive state into our session (oidc mode only).
-	$effect(() => {
-		if (AUTH_MODE !== 'oidc') return;
-		auth.ready = !oidc.loading;
-		auth.authenticated = oidc.isAuthenticated;
-		auth.error = oidc.error ? String(oidc.error) : null;
-		auth.user = oidc.isAuthenticated
-			? {
-					id: String(oidc.userInfo.sub ?? ''),
-					name: String(oidc.userInfo.name ?? oidc.userInfo.email ?? 'Angemeldet'),
-					email: oidc.userInfo.email as string | undefined,
-					token: oidc.accessToken
-				}
-			: null;
+	onMount(() => {
+		oidc.manage({
+			authority: 'https://openid.zeit.de/realms/zeit-online',
+			client_id: 'estimation-station',
+			redirect_uri: window.location.origin
+		});
 	});
-
-	const showLoginGate = $derived(AUTH_MODE === 'oidc' && auth.ready && !auth.authenticated);
 </script>
 
 <header class="masthead">
@@ -39,19 +26,17 @@
 </header>
 
 <div class="app">
-	{#if !auth.ready}
-		<p class="auth-status">Anmeldung wird geprüft …</p>
-	{:else if showLoginGate}
+	{#if oidc.isAuthenticated}
+		{@render children()}
+	{:else}
 		<section class="login">
 			<h1>Anmeldung erforderlich</h1>
 			<p class="login__lead">
 				Dieses Tool ist nur für das Team. Bitte melde dich mit deinem ZEIT-Account an.
 			</p>
-			<button class="login__btn" onclick={login}>Mit ZEIT-Account anmelden</button>
-			{#if auth.error}<p class="login__error">{auth.error}</p>{/if}
+			<button class="login__btn" onclick={oidc.login}>Mit ZEIT-Account anmelden</button>
+			{#if oidc.error}<p class="login__error">{oidc.error}</p>{/if}
 		</section>
-	{:else}
-		{@render children()}
 	{/if}
 </div>
 
@@ -94,9 +79,6 @@
 		white-space: nowrap;
 	}
 
-	.auth-status {
-		color: var(--z-ds-color-text-55, #69696c);
-	}
 	.login {
 		max-width: 30rem;
 	}
