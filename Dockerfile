@@ -43,3 +43,6 @@ EXPOSE 3000
 # Run as the image's built-in non-root user (required by most k8s policies).
 USER node
 ENTRYPOINT ["node", "build/server.js"]
+
+# alias to make CI workflows work
+FROM frontend AS nodejs
