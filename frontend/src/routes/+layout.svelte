@@ -58,7 +58,11 @@
 <footer class="footer">
 	<div class="footer__inner">
 		<span>© {new Date().getFullYear()} DIE ZEIT</span>
-		<a href="https://github.com/ZeitOnline/estimation-station" target="_blank" rel="noopener noreferrer">
+		<a
+			href="https://github.com/ZeitOnline/estimation-station"
+			target="_blank"
+			rel="noopener noreferrer"
+		>
 			Repo auf GitHub
 		</a>
 	</div>

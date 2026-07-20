@@ -181,7 +181,7 @@
 		width: 1.25rem;
 		height: 1.25rem;
 		display: inline-flex;
-		align-items: center; 
+		align-items: center;
 		justify-content: flex-end;
 	}
 	.copy__icon {
