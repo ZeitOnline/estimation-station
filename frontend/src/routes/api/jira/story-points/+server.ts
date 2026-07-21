@@ -11,6 +11,7 @@ import { error, json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 import { JiraError, jiraConfig, parseIssueKey, setStoryPoints } from '$lib/server/jira/jira';
+import { STORY_POINT_VALUES, isStoryPointValue } from '$lib/story-points';
 import { authorize, makeVerifier, type AuthPolicy } from '$lib/server/poker/auth';
 
 // `$env/dynamic/private` (not raw process.env): it also picks up frontend/.env
@@ -64,8 +65,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, 'issue must be a Jira link (…/browse/ENG-958) or an issue key');
 	}
 	const points = body.points;
-	if (typeof points !== 'number' || !Number.isFinite(points) || points < 0) {
-		error(400, 'points must be a non-negative number');
+	if (!isStoryPointValue(points)) {
+		error(400, `points must be a Fibonacci value up to 13 (${STORY_POINT_VALUES.join(', ')})`);
 	}
 
 	const cfg = jiraConfig(env);

@@ -7,6 +7,7 @@
 	import { voteSummary } from '$lib/poker/summary';
 	import { getName, getUserId, getToken } from '$lib/poker/identity';
 	import { parseIssueKey } from '$lib/jira-link';
+	import { STORY_POINT_VALUES, isStoryPointValue, nearestStoryPointValue } from '$lib/story-points';
 	import type { Card as CardType } from '$types';
 	import type { PageData } from './$types';
 
@@ -66,9 +67,7 @@
 	let jiraStatus = $state<{ ok: boolean; text: string } | null>(null);
 
 	const ticketKey = $derived(room.state?.ticket ? parseIssueKey(room.state.ticket) : null);
-	const canSubmit = $derived(
-		parseIssueKey(jiraLink) !== null && jiraPoints != null && jiraPoints >= 0
-	);
+	const canSubmit = $derived(parseIssueKey(jiraLink) !== null && isStoryPointValue(jiraPoints));
 
 	// Seed the link input from the broadcast ticket (e.g. moderator rejoined).
 	$effect(() => {
@@ -76,10 +75,11 @@
 		if (ticket && !jiraLink) jiraLink = ticket;
 	});
 
-	// After a reveal, prefill the points with the round's average.
+	// After a reveal, prefill the points with the Fibonacci value nearest to
+	// the round's average.
 	$effect(() => {
 		if (room.state?.revealed && summary?.average != null && jiraPoints == null) {
-			jiraPoints = Math.round(summary.average * 10) / 10;
+			jiraPoints = nearestStoryPointValue(summary.average);
 		}
 	});
 
@@ -211,15 +211,12 @@
 					bind:value={jiraLink}
 					onchange={shareTicket}
 				/>
-				<input
-					class="jira__points"
-					type="number"
-					min="0"
-					step="0.5"
-					placeholder="Punkte"
-					aria-label="Story Points"
-					bind:value={jiraPoints}
-				/>
+				<select class="jira__points" aria-label="Story Points" bind:value={jiraPoints}>
+					<option value={undefined} disabled hidden>Punkte</option>
+					{#each STORY_POINT_VALUES as points (points)}
+						<option value={points}>{points}</option>
+					{/each}
+				</select>
 				<button type="submit" disabled={!canSubmit || jiraBusy}>
 					<Icon name="checkmark" size={16} />
 					{jiraBusy ? 'Speichere…' : 'Punkte speichern'}
@@ -372,7 +369,8 @@
 		flex-wrap: wrap;
 		gap: var(--z-ds-space-s, 0.75rem);
 	}
-	.jira input {
+	.jira input,
+	.jira select {
 		padding: var(--z-ds-space-xs, 0.5rem);
 		border: 1px solid var(--z-ds-color-background-20, #dfdfe1);
 		border-radius: var(--z-ds-radius-s, 6px);
@@ -383,6 +381,16 @@
 	}
 	.jira__points {
 		width: 6rem;
+		/* Custom select: hide the native arrow and draw the ZDS chevron-down
+		   ourselves, nudged further in from the right edge. */
+		appearance: none;
+		padding-right: 2rem;
+		background-color: transparent;
+		background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13 4L7 10L1 4' stroke='%23262626' stroke-width='1.5'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 0.75rem center;
+		background-size: 12px;
+		cursor: pointer;
 	}
 	.jira__status {
 		margin: var(--z-ds-space-xs, 0.5rem) 0 0;
