@@ -54,11 +54,11 @@ Keycloak group) — see `frontend/src/lib/server/poker/auth.ts`.
 ## Architecture
 
 ```
-                      ┌───────────────────────────────────┐
-   browser  ────────▶ │  frontend  (SvelteKit, :5173)      │   the Planning Poker app
-      │  HTTP + WS     │  ├─ pages: landing + /room/[id]    │
-      │                │  └─ realtime WebSocket (/poker-ws) │   live room state (in memory)
-      │                └───────────────────────────────────┘
+                      ┌─────────────────────────────────────┐
+   browser  ────────▶ │  frontend  (SvelteKit, :5173)       │   the Planning Poker app
+      │  HTTP + WS    │  ├─ pages: landing + /room/[id]     │
+      │               │  └─ realtime WebSocket (/poker-ws)  │   live room state (in memory)
+      │               └─────────────────────────────────────┘
       │                        (optional / planned)
       └────────────────────────────────┐
                                         ▼
