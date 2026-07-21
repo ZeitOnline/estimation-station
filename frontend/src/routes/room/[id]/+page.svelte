@@ -6,6 +6,7 @@
 	import { createRoom } from '$lib/poker/room.svelte';
 	import { voteSummary } from '$lib/poker/summary';
 	import { getName, getUserId, getToken } from '$lib/poker/identity';
+	import { parseIssueKey } from '$lib/jira-link';
 	import type { Card as CardType } from '$types';
 	import type { PageData } from './$types';
 
@@ -58,6 +59,61 @@
 		copyTimer = setTimeout(() => (copied = false), 1600);
 	}
 
+	// --- Jira: current ticket + write story points (moderator form) ---
+	let jiraLink = $state('');
+	let jiraPoints = $state<number | undefined>(undefined);
+	let jiraBusy = $state(false);
+	let jiraStatus = $state<{ ok: boolean; text: string } | null>(null);
+
+	const ticketKey = $derived(room.state?.ticket ? parseIssueKey(room.state.ticket) : null);
+	const canSubmit = $derived(
+		parseIssueKey(jiraLink) !== null && jiraPoints != null && jiraPoints >= 0
+	);
+
+	// Seed the link input from the broadcast ticket (e.g. moderator rejoined).
+	$effect(() => {
+		const ticket = room.state?.ticket;
+		if (ticket && !jiraLink) jiraLink = ticket;
+	});
+
+	// After a reveal, prefill the points with the round's average.
+	$effect(() => {
+		if (room.state?.revealed && summary?.average != null && jiraPoints == null) {
+			jiraPoints = Math.round(summary.average * 10) / 10;
+		}
+	});
+
+	// Broadcast the ticket to the whole room (existing setTicket WS flow).
+	function shareTicket() {
+		jiraStatus = null;
+		room.setTicket(jiraLink.trim());
+	}
+
+	async function submitStoryPoints(e: SubmitEvent) {
+		e.preventDefault();
+		if (!canSubmit || jiraBusy) return;
+		jiraBusy = true;
+		jiraStatus = null;
+		try {
+			const headers: Record<string, string> = { 'content-type': 'application/json' };
+			const token = getToken();
+			if (token) headers.authorization = `Bearer ${token}`;
+			const res = await fetch(resolve('/api/jira/story-points'), {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({ issue: jiraLink.trim(), points: jiraPoints })
+			});
+			const data = await res.json().catch(() => null);
+			jiraStatus = res.ok
+				? { ok: true, text: `${data?.points} Punkte → ${data?.issueKey} gespeichert ✓` }
+				: { ok: false, text: data?.message ?? `Fehler ${res.status}` };
+		} catch {
+			jiraStatus = { ok: false, text: 'Netzwerkfehler — bitte nochmal versuchen' };
+		} finally {
+			jiraBusy = false;
+		}
+	}
+
 	function legacyCopy(text: string): boolean {
 		try {
 			const ta = document.createElement('textarea');
@@ -99,6 +155,19 @@
 {/if}
 
 {#if room.state}
+	{#if room.state.ticket}
+		<p class="ticket">
+			Aktuelles Ticket:
+			{#if room.state.ticket.startsWith('http')}
+				<a href={room.state.ticket} target="_blank" rel="noopener noreferrer">
+					{ticketKey ?? room.state.ticket}
+				</a>
+			{:else}
+				<strong>{room.state.ticket}</strong>
+			{/if}
+		</p>
+	{/if}
+
 	<section class="deck">
 		<h2>Wähle deine Schätzung…</h2>
 		<div class="cards">
@@ -129,6 +198,36 @@
 			<button onclick={() => room.reveal()} disabled={room.state.revealed}>
 				<Icon name="search" size={16} /> Aufdecken
 			</button>
+		</section>
+
+		<section class="jira">
+			<h2 class="jira__head">Story Points → Jira</h2>
+			<form class="jira__form" onsubmit={submitStoryPoints}>
+				<input
+					class="jira__link"
+					type="text"
+					placeholder="https://zeit-online.atlassian.net/browse/ENG-958"
+					aria-label="Jira-Ticket-Link"
+					bind:value={jiraLink}
+					onchange={shareTicket}
+				/>
+				<input
+					class="jira__points"
+					type="number"
+					min="0"
+					step="0.5"
+					placeholder="Punkte"
+					aria-label="Story Points"
+					bind:value={jiraPoints}
+				/>
+				<button type="submit" disabled={!canSubmit || jiraBusy}>
+					<Icon name="checkmark" size={16} />
+					{jiraBusy ? 'Speichere…' : 'Punkte speichern'}
+				</button>
+			</form>
+			{#if jiraStatus}
+				<p class="jira__status" class:jira__status--error={!jiraStatus.ok}>{jiraStatus.text}</p>
+			{/if}
 		</section>
 	{/if}
 {:else}
@@ -228,7 +327,8 @@
 		gap: var(--z-ds-space-s, 0.75rem);
 		margin-top: var(--z-ds-space-xl, 2rem);
 	}
-	.controls button {
+	.controls button,
+	.jira button {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
@@ -250,6 +350,45 @@
 		color: var(--z-ds-color-text-100, #252525);
 	}
 	.error {
+		color: var(--z-ds-color-error-70, #bf4040);
+	}
+	.ticket {
+		margin: 0 0 var(--z-ds-space-m, 1rem);
+		color: var(--z-ds-color-text-70, #444444);
+	}
+	.ticket a {
+		color: inherit;
+		font-weight: 600;
+	}
+	.jira {
+		margin-top: var(--z-ds-space-xl, 2rem);
+	}
+	.jira__head {
+		margin: 0 0 var(--z-ds-space-s, 0.75rem);
+		font-size: var(--z-ds-font-size-m, 1rem);
+	}
+	.jira__form {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--z-ds-space-s, 0.75rem);
+	}
+	.jira input {
+		padding: var(--z-ds-space-xs, 0.5rem);
+		border: 1px solid var(--z-ds-color-background-20, #dfdfe1);
+		border-radius: var(--z-ds-radius-s, 6px);
+		font: inherit;
+	}
+	.jira__link {
+		flex: 1 1 16rem;
+	}
+	.jira__points {
+		width: 6rem;
+	}
+	.jira__status {
+		margin: var(--z-ds-space-xs, 0.5rem) 0 0;
+		color: var(--z-ds-color-background-success, #09864d);
+	}
+	.jira__status--error {
 		color: var(--z-ds-color-error-70, #bf4040);
 	}
 </style>
