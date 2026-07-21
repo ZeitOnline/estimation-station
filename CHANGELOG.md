@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/ZeitOnline/estimation-station/compare/0.3.0...0.3.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* adjust architecture diagram formatting in README ([dbb6dbf](https://github.com/ZeitOnline/estimation-station/commit/dbb6dbf8c0141939bfb55e6435c54925acb0e05f))
+
 ## [0.3.0](https://github.com/ZeitOnline/estimation-station/compare/0.2.0...0.3.0) (2026-07-20)
 
 
