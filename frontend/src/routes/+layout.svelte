@@ -4,10 +4,14 @@
 	import { ZeitLogo } from '$components';
 	import { resolve } from '$app/paths';
 	import { oidc } from '@zeitonline/svelte-oidc';
+	import { AUTH_MOCK } from '$lib/poker/identity';
 
 	let { children }: { children: () => ReturnType<import('svelte').Snippet> } = $props();
 
 	onMount(() => {
+		// VITE_AUTH_MODE=mock: no real SSO — identity.ts fabricates a per-tab
+		// user and the login gate below is bypassed.
+		if (AUTH_MOCK) return;
 		oidc.manage({
 			authority: 'https://openid.zeit.de/realms/zeit-online',
 			client_id: 'estimation-station',
@@ -26,7 +30,7 @@
 </header>
 
 <div class="app">
-	{#if oidc.isAuthenticated}
+	{#if AUTH_MOCK || oidc.isAuthenticated}
 		{@render children()}
 	{:else}
 		<section class="login">

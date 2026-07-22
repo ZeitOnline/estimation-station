@@ -106,6 +106,20 @@ export class Rooms {
 		});
 	}
 
+	/** Any participant can claim moderation (e.g. the moderator is away). */
+	takeOver(roomId: string, userId: string): Room | null {
+		const room = this.rooms.get(roomId);
+		if (!room) return null;
+		const claimant = room.participants.get(userId);
+		if (!claimant || room.moderatorId === userId) return room;
+		const previous = room.participants.get(room.moderatorId);
+		if (previous) previous.role = 'voter';
+		room.moderatorId = userId;
+		claimant.role = 'moderator';
+		room.lastActivity = Date.now();
+		return room;
+	}
+
 	/** Mark a participant disconnected. Hand off moderator if they left. */
 	disconnect(roomId: string, userId: string): Room | null {
 		const room = this.rooms.get(roomId);

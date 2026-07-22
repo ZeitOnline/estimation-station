@@ -121,6 +121,14 @@
 		<Participants room={room.state} />
 	</section>
 
+	{#if !room.state.youAreModerator}
+		<section class="controls">
+			<button class="secondary" onclick={() => room.takeOver()}>
+				<Icon name="key" size={16} /> Moderation übernehmen
+			</button>
+		</section>
+	{/if}
+
 	{#if room.state.youAreModerator}
 		<section class="controls">
 			<button class="secondary" onclick={() => room.reset()}>
