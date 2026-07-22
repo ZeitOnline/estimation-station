@@ -50,6 +50,9 @@ export function createRoom() {
 		setTicket(title: string) {
 			send({ type: 'setTicket', title });
 		},
+		takeOver() {
+			send({ type: 'takeOver' });
+		},
 		disconnect() {
 			closedByUs = true;
 			if (reconnectTimer) clearTimeout(reconnectTimer);

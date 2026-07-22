@@ -15,6 +15,7 @@
 //     { type: 'reveal' }                                   (moderator only)
 //     { type: 'reset' }                                    (moderator only)
 //     { type: 'setTicket', title }                         (moderator only)
+//     { type: 'takeOver' }                                  (become the moderator)
 //   server -> client:
 //     { type: 'state', room }                              (full room, per-recipient)
 //     { type: 'error', message }
@@ -180,6 +181,9 @@ export function createWSSGlobalInstance(): WebSocketServer {
 					break;
 				case 'setTicket':
 					rooms.setTicket(ws.roomId, ws.userId, msg.title);
+					break;
+				case 'takeOver':
+					rooms.takeOver(ws.roomId, ws.userId);
 					break;
 				default:
 					return send(ws, { type: 'error', message: `unknown type: ${msg.type}` });

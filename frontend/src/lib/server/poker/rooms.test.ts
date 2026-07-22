@@ -73,6 +73,28 @@ describe('Rooms', () => {
 		expect(DEFAULT_DECK.includes(8)).toBe(true);
 	});
 
+	it('any participant can take over moderation', () => {
+		const rooms = new Rooms();
+		rooms.join('r1', 'alice', 'Alice');
+		rooms.join('r1', 'bob', 'Bob');
+		rooms.takeOver('r1', 'bob');
+		const room = rooms.get('r1')!;
+		expect(room.moderatorId).toBe('bob');
+		expect(room.participants.get('bob')!.role).toBe('moderator');
+		expect(room.participants.get('alice')!.role).toBe('voter');
+
+		// and the new moderator can act
+		rooms.reveal('r1', 'bob');
+		expect(room.revealed).toBe(true);
+	});
+
+	it('take over by a non-participant is ignored', () => {
+		const rooms = new Rooms();
+		rooms.join('r1', 'alice', 'Alice');
+		rooms.takeOver('r1', 'mallory');
+		expect(rooms.get('r1')!.moderatorId).toBe('alice');
+	});
+
 	it('moderator hands off when they disconnect', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');
