@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/ZeitOnline/estimation-station/compare/0.5.1...0.6.0) (2026-07-23)
+
+
+### Features
+
+* add direct integration with jira for assigning story points ([#7](https://github.com/ZeitOnline/estimation-station/issues/7)) ([fb10d8c](https://github.com/ZeitOnline/estimation-station/commit/fb10d8c9c73420c4b360401d0cb7ee4c2cb0aa6e))
+
+
+### Bug Fixes
+
+* **deployment:** move variables to env section ([#15](https://github.com/ZeitOnline/estimation-station/issues/15)) ([e9e5e13](https://github.com/ZeitOnline/estimation-station/commit/e9e5e13c9b884fabdd452d1d5a2ba34561473480))
+
 ## [0.5.1](https://github.com/ZeitOnline/estimation-station/compare/0.5.0...0.5.1) (2026-07-23)
 
 
