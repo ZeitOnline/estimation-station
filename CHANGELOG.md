@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/ZeitOnline/estimation-station/compare/0.4.0...0.5.0) (2026-07-23)
+
+
+### Features
+
+* add application version to footer with build time injection ([#11](https://github.com/ZeitOnline/estimation-station/issues/11)) ([6da5d03](https://github.com/ZeitOnline/estimation-station/commit/6da5d03dd158001a5af763c63fceb97840c04655))
+
 ## [0.4.0](https://github.com/ZeitOnline/estimation-station/compare/0.3.1...0.4.0) (2026-07-22)
 
 
