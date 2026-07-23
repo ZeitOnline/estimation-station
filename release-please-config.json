@@ -8,6 +8,11 @@
         {
           "type": "generic",
           "path": "k8s/production/versions/kustomization.yaml"
+        },
+        {
+          "type": "json",
+          "path": "frontend/package.json",
+          "jsonpath": "$.version"
         }
       ],
       "include-v-in-tag": false
