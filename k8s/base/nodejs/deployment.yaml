@@ -26,3 +26,6 @@ spec:
             httpGet:
               path: /health
               port: 3000
+          envFrom:
+            - secretRef:
+                name: jira-secrets
