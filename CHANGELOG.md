@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/ZeitOnline/estimation-station/compare/0.3.1...0.4.0) (2026-07-22)
+
+
+### Features
+
+* implement take over moderation functionality ([#8](https://github.com/ZeitOnline/estimation-station/issues/8)) ([8747d36](https://github.com/ZeitOnline/estimation-station/commit/8747d364e7abec2ea949c962581b5cc712a10dc5))
+
 ## [0.3.1](https://github.com/ZeitOnline/estimation-station/compare/0.3.0...0.3.1) (2026-07-21)
 
 
