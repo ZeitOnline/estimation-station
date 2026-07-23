@@ -3,7 +3,7 @@
   "bootstrap-sha": "03af5bb6012aded05aaafa9e016456f2ba7d7857",
   "packages": {
     ".": {
-      "release-type": "simple",
+      "release-type": "node",
       "extra-files": [
         {
           "type": "generic",
