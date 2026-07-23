@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/ZeitOnline/estimation-station/compare/0.5.0...0.5.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* update footer to use runtime environment variable ([#13](https://github.com/ZeitOnline/estimation-station/issues/13)) ([464bd8a](https://github.com/ZeitOnline/estimation-station/commit/464bd8abb158cde61c7b1f77568076054ee9f85b))
+
 ## [0.5.0](https://github.com/ZeitOnline/estimation-station/compare/0.4.0...0.5.0) (2026-07-23)
 
 
