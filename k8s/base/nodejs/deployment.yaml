@@ -25,6 +25,13 @@ spec:
             # (without a rebuild) still shows the right version.
             - name: PUBLIC_APP_VERSION
               value: unknown
+            # Server-side token verification for the WebSocket and the Jira
+            # write route — without this the app fails closed (see
+            # src/routes/api/jira/story-points/+server.ts).
+            - name: AUTH_MODE
+              value: oidc
+            - name: ALLOWED_EMAIL_DOMAINS
+              value: zeit.de
           resources:
             requests:
               cpu: "0.2"
@@ -33,14 +40,6 @@ spec:
             httpGet:
               path: /health
               port: 3000
-          env:
-            # Server-side token verification for the WebSocket and the Jira
-            # write route — without this the app fails closed (see
-            # src/routes/api/jira/story-points/+server.ts).
-            - name: AUTH_MODE
-              value: oidc
-            - name: ALLOWED_EMAIL_DOMAINS
-              value: zeit.de
           envFrom:
             - secretRef:
                 name: jira-secrets
