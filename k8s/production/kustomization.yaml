@@ -24,3 +24,22 @@ patches:
       - op: replace
         path: /spec/hostnames/0
         value: estimation-station.zon.zeit.de
+
+# Copy the deployed image tag (set via components/versions, i.e. the SemVer a
+# promoted image was tagged with) into PUBLIC_APP_VERSION. Replacements run
+# after the images transformer, so this always matches what is actually
+# running — unlike a version baked into the image at build time.
+replacements:
+  - source:
+      kind: Deployment
+      name: nodejs
+      fieldPath: spec.template.spec.containers.[name=nodejs].image
+      options:
+        delimiter: ":"
+        index: 1
+    targets:
+      - select:
+          kind: Deployment
+          name: nodejs
+        fieldPaths:
+          - spec.template.spec.containers.[name=nodejs].env.[name=PUBLIC_APP_VERSION].value

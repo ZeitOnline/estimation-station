@@ -18,6 +18,13 @@ spec:
       containers:
         - name: nodejs
           image: nodejs
+          env:
+            # Placeholder — overwritten with the deployed image tag by the
+            # `replacements` in the overlay kustomization. Read at runtime by
+            # the app ($env/dynamic/public), so promoting an image by re-tagging
+            # (without a rebuild) still shows the right version.
+            - name: PUBLIC_APP_VERSION
+              value: unknown
           resources:
             requests:
               cpu: "0.2"

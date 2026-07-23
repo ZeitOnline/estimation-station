@@ -1,10 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vitest/config';
 import type { PluginOption } from 'vite';
-import { readFileSync } from 'node:fs';
 import { createWSSGlobalInstance, onHttpServerUpgrade } from './src/lib/server/poker/ws-server';
-
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
 
 // Attach the realtime WebSocket server to Vite's own HTTP server so it shares
 // the dev/preview port (no separate :8080 process). In production the same
@@ -26,9 +23,6 @@ const realtimeWebSocket: PluginOption = {
 
 export default defineConfig({
 	plugins: [sveltekit(), realtimeWebSocket],
-	define: {
-		__APP_VERSION__: JSON.stringify(pkg.version)
-	},
 	test: {
 		globals: true,
 		setupFiles: ['./src/setupTests.ts'],
