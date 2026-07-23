@@ -37,7 +37,7 @@ export default defineConfig({
 	},
 	server: {
 		host: true,
-		port: '34771'
+		port: 34771
 	},
 	resolve: {
 		conditions: ['browser']

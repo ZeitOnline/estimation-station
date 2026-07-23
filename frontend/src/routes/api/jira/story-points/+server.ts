@@ -8,6 +8,7 @@
 // =============================================================================
 
 import { error, json } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 import { JiraError, jiraConfig, parseIssueKey, setStoryPoints } from '$lib/server/jira/jira';
@@ -40,6 +41,12 @@ function buildPolicy(): AuthPolicy {
 
 export const POST: RequestHandler = async ({ request }) => {
 	const verify = buildVerifier();
+	// Fail closed: this route writes to Jira with a privileged server-side
+	// token, so a production build must never run it unauthenticated. Only a
+	// dev build may skip verification (AUTH_MODE=off for local work).
+	if (!verify && !dev) {
+		error(503, 'auth is not configured (set AUTH_MODE=oidc) — refusing Jira writes');
+	}
 	if (verify) {
 		const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
 		if (!token) error(401, 'authentication required');
