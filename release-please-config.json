@@ -3,11 +3,16 @@
   "bootstrap-sha": "03af5bb6012aded05aaafa9e016456f2ba7d7857",
   "packages": {
     ".": {
-      "release-type": "node",
+      "release-type": "simple",
       "extra-files": [
         {
           "type": "generic",
           "path": "k8s/production/versions/kustomization.yaml"
+        },
+        {
+          "type": "json",
+          "path": "frontend/package.json",
+          "jsonpath": "$.version"
         }
       ],
       "include-v-in-tag": false
