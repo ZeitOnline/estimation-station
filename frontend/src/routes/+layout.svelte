@@ -47,6 +47,7 @@
 <footer class="footer">
 	<div class="footer__inner">
 		<span>© {new Date().getFullYear()} DIE ZEIT</span>
+		<span class="footer__version">v{__APP_VERSION__}</span>
 		<a
 			href="https://github.com/ZeitOnline/estimation-station"
 			target="_blank"
