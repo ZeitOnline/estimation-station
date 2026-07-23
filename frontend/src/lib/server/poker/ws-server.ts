@@ -93,6 +93,12 @@ export function createWSSGlobalInstance(): WebSocketServer {
 	console.log(
 		`[poker] realtime WebSocket ready on ${WS_PATH} (auth mode: ${verify ? 'oidc' : 'off'})`
 	);
+	if (!verify && process.env.NODE_ENV === 'production') {
+		console.warn(
+			'[poker] WARNING: running in production without AUTH_MODE=oidc — ' +
+				'the WebSocket trusts client-supplied identity. Set AUTH_MODE=oidc.'
+		);
+	}
 
 	function send(ws: WebSocket, obj: unknown) {
 		if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(obj));

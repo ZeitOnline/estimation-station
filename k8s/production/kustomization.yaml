@@ -6,6 +6,7 @@ namespace: estimation-station
 resources:
   - ../base/nodejs
   - ../base/gateway
+  - externalsecrets.yaml
 
 components:
   - versions

@@ -33,3 +33,14 @@ spec:
             httpGet:
               path: /health
               port: 3000
+          env:
+            # Server-side token verification for the WebSocket and the Jira
+            # write route — without this the app fails closed (see
+            # src/routes/api/jira/story-points/+server.ts).
+            - name: AUTH_MODE
+              value: oidc
+            - name: ALLOWED_EMAIL_DOMAINS
+              value: zeit.de
+          envFrom:
+            - secretRef:
+                name: jira-secrets
