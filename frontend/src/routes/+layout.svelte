@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '$lib/styles/app.css';
 	import { onMount } from 'svelte';
+	import { env } from '$env/dynamic/public';
 	import { ZeitLogo } from '$components';
 	import { resolve } from '$app/paths';
 	import { oidc } from '@zeitonline/svelte-oidc';
@@ -47,7 +48,10 @@
 <footer class="footer">
 	<div class="footer__inner">
 		<span>© {new Date().getFullYear()} DIE ZEIT</span>
-		<span class="footer__version">v{__APP_VERSION__}</span>
+		<!-- PUBLIC_APP_VERSION is set by the deployment to the running image's tag
+		     (see k8s/*/kustomization.yaml `replacements`) — a build-time constant
+		     would go stale when images are promoted to production via re-tagging. -->
+		<span class="footer__version">v{env.PUBLIC_APP_VERSION || 'dev'}</span>
 		<a
 			href="https://github.com/ZeitOnline/estimation-station"
 			target="_blank"
