@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/ZeitOnline/estimation-station/compare/0.6.0...0.7.0) (2026-07-24)
+
+
+### Features
+
+* add transition handling for Jira issues and refine status updates ([#17](https://github.com/ZeitOnline/estimation-station/issues/17)) ([120deae](https://github.com/ZeitOnline/estimation-station/commit/120deaea69831f293c4276f5a8364348415a6ffe))
+
 ## [0.6.0](https://github.com/ZeitOnline/estimation-station/compare/0.5.1...0.6.0) (2026-07-23)
 
 
