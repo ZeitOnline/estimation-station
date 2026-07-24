@@ -105,7 +105,12 @@ async function submitStoryPoints(e: SubmitEvent) {
 		});
 		const data = await res.json().catch(() => null);
 		jiraStatus = res.ok
-			? { ok: true, text: `${data?.points} Punkte → ${data?.issueKey} gespeichert ✓` }
+			? {
+					ok: true,
+					text: data?.transitioned
+						? `${data?.points} Punkte → ${data?.issueKey} gespeichert, Status: Refined ✓`
+						: `${data?.points} Punkte → ${data?.issueKey} gespeichert ✓ (Status unverändert)`
+				}
 			: { ok: false, text: data?.message ?? `Fehler ${res.status}` };
 	} catch {
 		jiraStatus = { ok: false, text: 'Netzwerkfehler — bitte nochmal versuchen' };

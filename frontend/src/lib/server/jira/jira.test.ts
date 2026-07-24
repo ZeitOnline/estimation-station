@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { type JiraConfig, JiraError, jiraConfig, parseIssueKey, setStoryPoints } from './jira';
+import {
+	type JiraConfig,
+	JiraError,
+	jiraConfig,
+	parseIssueKey,
+	setStoryPoints,
+	transitionTo
+} from './jira';
 
 describe('parseIssueKey', () => {
 	it('extracts the key from a browse link', () => {
@@ -99,5 +106,71 @@ describe('setStoryPoints', () => {
 		const err = await setStoryPoints(cfg, 'ENG-958', 5, fetchFn).catch((e) => e);
 		expect(err).toBeInstanceOf(JiraError);
 		expect(err.message).toBe('Jira responded with 502');
+	});
+});
+
+describe('transitionTo', () => {
+	const cfg: JiraConfig = {
+		baseUrl: 'https://zeit-online.atlassian.net',
+		email: 'bot@zeit.de',
+		apiToken: 'secret',
+		storyPointsField: 'customfield_10001'
+	};
+
+	const transitions = {
+		transitions: [
+			{ id: '11', name: 'Start Progress', to: { name: 'In Progress' } },
+			{ id: '21', name: 'Refine', to: { name: 'Refined' } }
+		]
+	};
+
+	it('finds the transition landing on the wanted status and POSTs it', async () => {
+		const calls: Array<{ url: string; init?: RequestInit }> = [];
+		const fetchFn = (async (url: string | URL | Request, init?: RequestInit) => {
+			calls.push({ url: String(url), init });
+			if (!init?.method) return new Response(JSON.stringify(transitions), { status: 200 });
+			return new Response(null, { status: 204 });
+		}) as typeof fetch;
+
+		await expect(transitionTo(cfg, 'ENG-958', 'refined', fetchFn)).resolves.toBe(true);
+
+		expect(calls).toHaveLength(2);
+		expect(calls[0].url).toBe(
+			'https://zeit-online.atlassian.net/rest/api/3/issue/ENG-958/transitions'
+		);
+		expect(calls[1].init?.method).toBe('POST');
+		expect(JSON.parse(String(calls[1].init?.body))).toEqual({ transition: { id: '21' } });
+	});
+
+	it('returns false when no transition leads to the status from here', async () => {
+		const fetchFn = (async () =>
+			new Response(JSON.stringify(transitions), { status: 200 })) as typeof fetch;
+
+		await expect(transitionTo(cfg, 'ENG-958', 'Done', fetchFn)).resolves.toBe(false);
+	});
+
+	it('throws a JiraError when listing the transitions fails', async () => {
+		const fetchFn = (async () =>
+			new Response(JSON.stringify({ errorMessages: ['Issue does not exist'] }), {
+				status: 404
+			})) as typeof fetch;
+
+		const err = await transitionTo(cfg, 'ENG-999', 'Refined', fetchFn).catch((e) => e);
+		expect(err).toBeInstanceOf(JiraError);
+		expect(err.status).toBe(404);
+		expect(err.message).toBe('Issue does not exist');
+	});
+
+	it('throws a JiraError when executing the transition fails', async () => {
+		const fetchFn = (async (_url: string | URL | Request, init?: RequestInit) => {
+			if (!init?.method) return new Response(JSON.stringify(transitions), { status: 200 });
+			return new Response(JSON.stringify({ errorMessages: ['It is not on the workflow'] }), {
+				status: 400
+			});
+		}) as typeof fetch;
+
+		const err = await transitionTo(cfg, 'ENG-958', 'Refined', fetchFn).catch((e) => e);
+		expect(err).toBeInstanceOf(JiraError);
+		expect(err.status).toBe(400);
 	});
 });
