@@ -1,6 +1,6 @@
 <script lang="ts">
-	// The official DIE ZEIT wordmark (complete SVG path from zeit.de, viewBox 0 0 224 34).
-	let { width = 224, height = 34 }: { width?: number; height?: number } = $props();
+// The official DIE ZEIT wordmark (complete SVG path from zeit.de, viewBox 0 0 224 34).
+let { width = 224, height = 34 }: { width?: number; height?: number } = $props();
 </script>
 
 <svg

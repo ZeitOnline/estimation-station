@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { Rooms, DEFAULT_DECK } from './rooms';
+import { describe, expect, it } from 'vitest';
+import { DEFAULT_DECK, Rooms } from './rooms';
 
 describe('Rooms', () => {
 	it('first joiner becomes moderator', () => {

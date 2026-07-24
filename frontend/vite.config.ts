@@ -1,6 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vitest/config';
 import type { PluginOption } from 'vite';
+import { defineConfig } from 'vitest/config';
 import { createWSSGlobalInstance, onHttpServerUpgrade } from './src/lib/server/poker/ws-server';
 
 // Attach the realtime WebSocket server to Vite's own HTTP server so it shares
