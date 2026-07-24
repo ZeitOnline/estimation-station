@@ -1,5 +1,7 @@
 // =============================================================================
-// POST /api/jira/story-points — write a story-point estimate to a Jira issue.
+// POST /api/jira/story-points — write a story-point estimate to a Jira issue
+// and move it to the "Refined" workflow status (JIRA_REFINED_STATUS to
+// override the name).
 //
 // Body: { issue: string, points: number } where `issue` is a browse link or a
 // bare key. The Jira token lives server-side only (see lib/server/jira). In
@@ -11,7 +13,13 @@ import { error, json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
-import { JiraError, jiraConfig, parseIssueKey, setStoryPoints } from '$lib/server/jira/jira';
+import {
+	JiraError,
+	jiraConfig,
+	parseIssueKey,
+	setStoryPoints,
+	transitionTo
+} from '$lib/server/jira/jira';
 import { STORY_POINT_VALUES, isStoryPointValue } from '$lib/story-points';
 import { authorize, makeVerifier, type AuthPolicy } from '$lib/server/poker/auth';
 
@@ -96,5 +104,18 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(502, `Jira request failed: ${err instanceof Error ? err.message : String(err)}`);
 	}
 
-	return json({ ok: true, issueKey, points });
+	// Estimated tickets also move to "Refined". The points are saved at this
+	// point, so a transition problem must not fail the request — the workflow
+	// may simply not offer the transition from the ticket's current status
+	// (or the ticket is already Refined). Report what happened instead.
+	const refinedStatus = env.JIRA_REFINED_STATUS || 'Refined';
+	let transitioned = false;
+	let transitionError: string | undefined;
+	try {
+		transitioned = await transitionTo(cfg, issueKey, refinedStatus);
+	} catch (err) {
+		transitionError = err instanceof JiraError ? err.message : String(err);
+	}
+
+	return json({ ok: true, issueKey, points, transitioned, transitionError });
 };

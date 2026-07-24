@@ -41,6 +41,14 @@ export class JiraError extends Error {
 	}
 }
 
+function headers(cfg: JiraConfig): Record<string, string> {
+	return {
+		authorization: 'Basic ' + Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString('base64'),
+		'content-type': 'application/json',
+		accept: 'application/json'
+	};
+}
+
 /**
  * Set the story points of one issue. Resolves on success, throws JiraError
  * with Jira's own explanation otherwise (wrong key → 404, unknown field or
@@ -54,14 +62,46 @@ export async function setStoryPoints(
 ): Promise<void> {
 	const res = await fetchFn(`${cfg.baseUrl}/rest/api/3/issue/${issueKey}`, {
 		method: 'PUT',
-		headers: {
-			authorization: 'Basic ' + Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString('base64'),
-			'content-type': 'application/json',
-			accept: 'application/json'
-		},
+		headers: headers(cfg),
 		body: JSON.stringify({ fields: { [cfg.storyPointsField]: points } })
 	});
 	if (res.ok) return;
+	throw new JiraError(await errorMessage(res), res.status);
+}
+
+/**
+ * Move an issue to the workflow status named `statusName` (e.g. "Refined").
+ *
+ * Status is not an editable field in Jira — it only changes through workflow
+ * transitions, and which transitions exist depends on the issue's *current*
+ * status. So: list the transitions available right now, pick the one landing
+ * on the wanted status, execute it. Returns true if the issue was moved,
+ * false if the workflow offers no transition to that status from here (also
+ * the case when the issue is already there). Throws JiraError on HTTP errors.
+ */
+export async function transitionTo(
+	cfg: JiraConfig,
+	issueKey: string,
+	statusName: string,
+	fetchFn: typeof fetch = fetch
+): Promise<boolean> {
+	const url = `${cfg.baseUrl}/rest/api/3/issue/${issueKey}/transitions`;
+	const list = await fetchFn(url, { headers: headers(cfg) });
+	if (!list.ok) throw new JiraError(await errorMessage(list), list.status);
+
+	const body: { transitions?: Array<{ id: string; to?: { name?: string } }> } = await list.json();
+	const wanted = statusName.trim().toLowerCase();
+	const transition = (body.transitions ?? []).find(
+		(t) => t.to?.name?.trim().toLowerCase() === wanted
+	);
+	if (!transition) return false;
+
+	const res = await fetchFn(url, {
+		method: 'POST',
+		headers: headers(cfg),
+		body: JSON.stringify({ transition: { id: transition.id } })
+	});
+	if (res.ok) return true;
 	throw new JiraError(await errorMessage(res), res.status);
 }
 
