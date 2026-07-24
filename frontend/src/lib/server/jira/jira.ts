@@ -105,6 +105,60 @@ export async function transitionTo(
 	throw new JiraError(await errorMessage(res), res.status);
 }
 
+export interface IssuePreview {
+	key: string;
+	summary: string;
+	description: string;
+}
+
+/**
+ * Plain text from an Atlassian Document Format tree (Jira API v3 returns
+ * descriptions as ADF, not strings). Marks, media and layout are dropped;
+ * block nodes end in a newline so paragraphs and list items stay separated.
+ */
+export function adfToText(node: unknown): string {
+	if (!node || typeof node !== 'object') return '';
+	const n = node as { type?: string; text?: string; content?: unknown[] };
+	if (n.type === 'text') return n.text ?? '';
+	if (n.type === 'hardBreak') return '\n';
+	const inner = (n.content ?? []).map(adfToText).join('');
+	const isBlock = ['paragraph', 'heading', 'listItem', 'taskItem', 'tableRow'].includes(
+		n.type ?? ''
+	);
+	return isBlock ? `${inner}\n` : inner;
+}
+
+/**
+ * Fetch summary + description of one issue for the room preview. Some
+ * projects keep their text in a custom field instead of `description`
+ * (e.g. ENG's "Beschreibung ENG-Task"), so `descriptionFields` is the
+ * ordered list of fields to try — the first non-empty one wins.
+ */
+export async function getIssuePreview(
+	cfg: JiraConfig,
+	issueKey: string,
+	descriptionFields: string[] = ['description'],
+	fetchFn: typeof fetch = fetch
+): Promise<IssuePreview> {
+	const fields = ['summary', ...descriptionFields].join(',');
+	const res = await fetchFn(`${cfg.baseUrl}/rest/api/3/issue/${issueKey}?fields=${fields}`, {
+		headers: headers(cfg)
+	});
+	if (!res.ok) throw new JiraError(await errorMessage(res), res.status);
+
+	const body: { key?: string; fields?: Record<string, unknown> } = await res.json();
+	const summary = typeof body.fields?.summary === 'string' ? body.fields.summary : '';
+	let description = '';
+	for (const field of descriptionFields) {
+		const value = body.fields?.[field];
+		description = (typeof value === 'string' ? value : adfToText(value))
+			.replace(/\n{3,}/g, '\n\n')
+			.trim();
+		if (description) break;
+	}
+	return { key: body.key ?? issueKey, summary, description };
+}
+
 // Jira error bodies look like { errorMessages: [...], errors: { field: msg } }.
 async function errorMessage(res: Response): Promise<string> {
 	let detail = '';

@@ -69,6 +69,35 @@ let jiraStatus = $state<{ ok: boolean; text: string } | null>(null);
 const ticketKey = $derived(room.state?.ticket ? parseIssueKey(room.state.ticket) : null);
 const canSubmit = $derived(parseIssueKey(jiraLink) !== null && isStoryPointValue(jiraPoints));
 
+// Title + description of the broadcast ticket, fetched for everyone in the
+// room so all estimators see what they are voting on. Best-effort: a failed
+// fetch just means no preview (e.g. Jira not configured). The short debounce
+// absorbs rapid ticket changes; the key check drops stale late responses.
+let ticketPreview = $state<{ key: string; summary: string; description: string } | null>(null);
+
+$effect(() => {
+	const key = ticketKey;
+	ticketPreview = null;
+	if (!key) return;
+	const timer = setTimeout(async () => {
+		try {
+			const headers: Record<string, string> = {};
+			const token = getToken();
+			if (token) headers.authorization = `Bearer ${token}`;
+			const res = await fetch(`${resolve('/api/jira/preview')}?issue=${encodeURIComponent(key)}`, {
+				headers
+			});
+			if (!res.ok) return;
+			const data = await res.json();
+			// ticketKey may have moved on while the request was in flight
+			if (data?.key === ticketKey && data?.summary) ticketPreview = data;
+		} catch {
+			// preview is optional — stay quiet
+		}
+	}, 300);
+	return () => clearTimeout(timer);
+});
+
 // Seed the link input from the broadcast ticket (e.g. moderator rejoined).
 $effect(() => {
 	const ticket = room.state?.ticket;
@@ -171,6 +200,14 @@ function legacyCopy(text: string): boolean {
 				<strong>{room.state.ticket}</strong>
 			{/if}
 		</p>
+		{#if ticketPreview}
+			<div class="ticket-preview">
+				<p class="ticket-preview__title">{ticketPreview.summary}</p>
+				{#if ticketPreview.description}
+					<p class="ticket-preview__desc">{ticketPreview.description}</p>
+				{/if}
+			</div>
+		{/if}
 	{/if}
 
 	<section class="deck">
@@ -369,6 +406,23 @@ function legacyCopy(text: string): boolean {
 	.ticket a {
 		color: inherit;
 		font-weight: 600;
+	}
+	.ticket-preview {
+		margin: 0 0 var(--z-ds-space-m, 1rem);
+		padding: var(--z-ds-space-s, 0.75rem);
+		border-left: 3px solid var(--z-ds-color-border-70, #cccccc);
+		background: var(--z-ds-color-background-95, #f6f6f6);
+	}
+	.ticket-preview__title {
+		margin: 0;
+		font-weight: 600;
+		color: var(--z-ds-color-text-100, #252525);
+	}
+	.ticket-preview__desc {
+		margin: var(--z-ds-space-xs, 0.5rem) 0 0;
+		color: var(--z-ds-color-text-70, #444444);
+		font-size: var(--z-ds-font-size-s, 0.875rem);
+		white-space: pre-line;
 	}
 	.jira {
 		margin-top: var(--z-ds-space-xl, 2rem);
