@@ -10,8 +10,8 @@
 // =============================================================================
 
 import { error, json } from '@sveltejs/kit';
-import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
+import { requireApiUser } from '$lib/server/api-auth';
 import {
 	JiraError,
 	jiraConfig,
@@ -19,51 +19,11 @@ import {
 	setStoryPoints,
 	transitionTo
 } from '$lib/server/jira/jira';
-import { type AuthPolicy, authorize, makeVerifier } from '$lib/server/poker/auth';
 import { isStoryPointValue, STORY_POINT_VALUES } from '$lib/story-points';
 import type { RequestHandler } from './$types';
 
-// `$env/dynamic/private` (not raw process.env): it also picks up frontend/.env
-// in dev, where Vite does not populate process.env.
-
-// Same env-driven auth switches as ws-server.ts: AUTH_MODE=oidc verifies
-// tokens, anything else trusts the caller (local dev).
-function buildVerifier() {
-	if ((env.AUTH_MODE || 'off') !== 'oidc') return null;
-	return makeVerifier({
-		issuer: env.OIDC_ISSUER || 'https://openid.zeit.de/realms/zeit-online',
-		jwksUrl: env.OIDC_JWKS_URL,
-		audience: env.OIDC_AUDIENCE
-	});
-}
-
-function buildPolicy(): AuthPolicy {
-	return {
-		allowedDomains: (env.ALLOWED_EMAIL_DOMAINS || '')
-			.split(',')
-			.map((d) => d.trim().toLowerCase())
-			.filter(Boolean),
-		allowedGroup: env.ALLOWED_GROUP || undefined
-	};
-}
-
 export const POST: RequestHandler = async ({ request }) => {
-	const verify = buildVerifier();
-	// Fail closed: this route writes to Jira with a privileged server-side
-	// token, so a production build must never run it unauthenticated. Only a
-	// dev build may skip verification (AUTH_MODE=off for local work).
-	if (!verify && !dev) {
-		error(503, 'auth is not configured (set AUTH_MODE=oidc) — refusing Jira writes');
-	}
-	if (verify) {
-		const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-		if (!token) error(401, 'authentication required');
-		const claims = await verify(token).catch((err: unknown) =>
-			error(401, `invalid token: ${err instanceof Error ? err.message : String(err)}`)
-		);
-		const decision = authorize(claims, buildPolicy());
-		if (!decision.ok) error(403, `access denied: ${decision.reason}`);
-	}
+	await requireApiUser(request);
 
 	let body: { issue?: unknown; points?: unknown };
 	try {

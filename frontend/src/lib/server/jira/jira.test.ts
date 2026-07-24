@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+	adfToText,
+	getIssuePreview,
 	type JiraConfig,
 	JiraError,
 	jiraConfig,
@@ -172,5 +174,117 @@ describe('transitionTo', () => {
 		const err = await transitionTo(cfg, 'ENG-958', 'Refined', fetchFn).catch((e) => e);
 		expect(err).toBeInstanceOf(JiraError);
 		expect(err.status).toBe(400);
+	});
+});
+
+describe('adfToText', () => {
+	it('flattens paragraphs, headings and task items to lines', () => {
+		const adf = {
+			type: 'doc',
+			version: 1,
+			content: [
+				{ type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: 'Todo' }] },
+				{
+					type: 'paragraph',
+					content: [
+						{ type: 'text', text: 'Nutzer*innen können ' },
+						{ type: 'text', text: 'Freebies', marks: [{ type: 'code' }] },
+						{ type: 'text', text: ' verschenken.' }
+					]
+				},
+				{
+					type: 'taskList',
+					content: [{ type: 'taskItem', content: [{ type: 'text', text: 'Dialog statt Paywall' }] }]
+				}
+			]
+		};
+
+		expect(adfToText(adf)).toBe(
+			'Todo\nNutzer*innen können Freebies verschenken.\nDialog statt Paywall\n'
+		);
+	});
+
+	it('is empty for null, strings and unknown shapes', () => {
+		expect(adfToText(null)).toBe('');
+		expect(adfToText(undefined)).toBe('');
+		expect(adfToText('plain')).toBe('');
+		expect(adfToText({ type: 'mediaSingle', attrs: {} })).toBe('');
+	});
+});
+
+describe('getIssuePreview', () => {
+	const cfg: JiraConfig = {
+		baseUrl: 'https://zeit-online.atlassian.net',
+		email: 'bot@zeit.de',
+		apiToken: 'secret',
+		storyPointsField: 'customfield_10001'
+	};
+
+	const adf = (text: string) => ({
+		type: 'doc',
+		version: 1,
+		content: [{ type: 'paragraph', content: [{ type: 'text', text }] }]
+	});
+
+	it('requests only the wanted fields and returns summary + description', async () => {
+		let seenUrl = '';
+		const fetchFn = (async (url: string | URL | Request) => {
+			seenUrl = String(url);
+			return new Response(
+				JSON.stringify({
+					key: 'ENG-958',
+					fields: {
+						summary: 'Freebie-Modal zeigen',
+						description: adf('Im Frontend fehlt das Modal.')
+					}
+				}),
+				{ status: 200 }
+			);
+		}) as typeof fetch;
+
+		const preview = await getIssuePreview(cfg, 'ENG-958', ['description'], fetchFn);
+
+		expect(seenUrl).toBe(
+			'https://zeit-online.atlassian.net/rest/api/3/issue/ENG-958?fields=summary,description'
+		);
+		expect(preview).toEqual({
+			key: 'ENG-958',
+			summary: 'Freebie-Modal zeigen',
+			description: 'Im Frontend fehlt das Modal.'
+		});
+	});
+
+	it('falls through the description fields until one has text', async () => {
+		const fetchFn = (async () =>
+			new Response(
+				JSON.stringify({
+					key: 'ENG-958',
+					fields: {
+						summary: 'Titel',
+						customfield_11371: null,
+						description: adf('Aus dem Systemfeld.')
+					}
+				}),
+				{ status: 200 }
+			)) as typeof fetch;
+
+		const preview = await getIssuePreview(
+			cfg,
+			'ENG-958',
+			['customfield_11371', 'description'],
+			fetchFn
+		);
+		expect(preview.description).toBe('Aus dem Systemfeld.');
+	});
+
+	it('throws a JiraError for an unknown issue', async () => {
+		const fetchFn = (async () =>
+			new Response(JSON.stringify({ errorMessages: ['Issue does not exist'] }), {
+				status: 404
+			})) as typeof fetch;
+
+		const err = await getIssuePreview(cfg, 'ENG-999', ['description'], fetchFn).catch((e) => e);
+		expect(err).toBeInstanceOf(JiraError);
+		expect(err.status).toBe(404);
 	});
 });
