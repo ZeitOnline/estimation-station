@@ -1,25 +1,25 @@
 <script lang="ts">
-	// Inline an SVG from the ZEIT design system (@zeitonline/icons, copied into
-	// ./svg via `npm run copy:icons`). Inlining — rather than <img> — lets the
-	// icon inherit the current text color (every DS icon uses `currentColor`)
-	// and be sized with CSS. The button/link text is the accessible label, so
-	// the icon itself is aria-hidden.
-	const modules = import.meta.glob('./svg/*.svg', {
-		query: '?raw',
-		import: 'default',
-		eager: true
-	}) as Record<string, string>;
+// Inline an SVG from the ZEIT design system (@zeitonline/icons, copied into
+// ./svg via `npm run copy:icons`). Inlining — rather than <img> — lets the
+// icon inherit the current text color (every DS icon uses `currentColor`)
+// and be sized with CSS. The button/link text is the accessible label, so
+// the icon itself is aria-hidden.
+const modules = import.meta.glob('./svg/*.svg', {
+	query: '?raw',
+	import: 'default',
+	eager: true
+}) as Record<string, string>;
 
-	let {
-		name,
-		size = 18
-	}: {
-		/** File name without extension, e.g. "link", "reload", "checkmark". */
-		name: string;
-		size?: number;
-	} = $props();
+let {
+	name,
+	size = 18
+}: {
+	/** File name without extension, e.g. "link", "reload", "checkmark". */
+	name: string;
+	size?: number;
+} = $props();
 
-	const svg = $derived(modules[`./svg/${name}.svg`]);
+const svg = $derived(modules[`./svg/${name}.svg`]);
 </script>
 
 {#if svg}

@@ -1,24 +1,24 @@
 <script lang="ts">
-	import '$lib/styles/app.css';
-	import { onMount } from 'svelte';
-	import { env } from '$env/dynamic/public';
-	import { ZeitLogo } from '$components';
-	import { resolve } from '$app/paths';
-	import { oidc } from '@zeitonline/svelte-oidc';
-	import { AUTH_MOCK } from '$lib/poker/identity';
+import '$lib/styles/app.css';
+import { oidc } from '@zeitonline/svelte-oidc';
+import { onMount } from 'svelte';
+import { resolve } from '$app/paths';
+import { ZeitLogo } from '$components';
+import { env } from '$env/dynamic/public';
+import { AUTH_MOCK } from '$lib/poker/identity';
 
-	let { children }: { children: () => ReturnType<import('svelte').Snippet> } = $props();
+let { children }: { children: () => ReturnType<import('svelte').Snippet> } = $props();
 
-	onMount(() => {
-		// VITE_AUTH_MODE=mock: no real SSO — identity.ts fabricates a per-tab
-		// user and the login gate below is bypassed.
-		if (AUTH_MOCK) return;
-		oidc.manage({
-			authority: 'https://openid.zeit.de/realms/zeit-online',
-			client_id: 'estimation-station',
-			redirect_uri: window.location.origin
-		});
+onMount(() => {
+	// VITE_AUTH_MODE=mock: no real SSO — identity.ts fabricates a per-tab
+	// user and the login gate below is bypassed.
+	if (AUTH_MOCK) return;
+	oidc.manage({
+		authority: 'https://openid.zeit.de/realms/zeit-online',
+		client_id: 'estimation-station',
+		redirect_uri: window.location.origin
 	});
+});
 </script>
 
 <header class="masthead">

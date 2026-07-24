@@ -12,7 +12,7 @@
 // so no secrets live in code.
 // =============================================================================
 
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { createRemoteJWKSet, type JWTPayload, jwtVerify } from 'jose';
 
 export interface AuthPolicy {
 	allowedDomains?: string[];
@@ -65,7 +65,10 @@ export function authorize(
 }
 
 /** Pick a stable, human display name from the token claims. */
-export function identityFromClaims(claims: KeycloakClaims): { userId: string; name: string } {
+export function identityFromClaims(claims: KeycloakClaims): {
+	userId: string;
+	name: string;
+} {
 	return {
 		userId: String(claims.sub),
 		name: claims.name || claims.preferred_username || claims.email || 'Anonym'

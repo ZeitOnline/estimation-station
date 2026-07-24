@@ -1,139 +1,139 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { Card, Participants, Icon } from '$components';
-	import { createRoom } from '$lib/poker/room.svelte';
-	import { voteSummary } from '$lib/poker/summary';
-	import { getName, getUserId, getToken } from '$lib/poker/identity';
-	import { parseIssueKey } from '$lib/jira-link';
-	import { STORY_POINT_VALUES, isStoryPointValue, nearestStoryPointValue } from '$lib/story-points';
-	import type { Card as CardType } from '$types';
-	import type { PageData } from './$types';
+import { onDestroy, onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
+import { Card, Icon, Participants } from '$components';
+import { parseIssueKey } from '$lib/jira-link';
+import { getName, getToken, getUserId } from '$lib/poker/identity';
+import { createRoom } from '$lib/poker/room.svelte';
+import { voteSummary } from '$lib/poker/summary';
+import { isStoryPointValue, nearestStoryPointValue, STORY_POINT_VALUES } from '$lib/story-points';
+import type { Card as CardType } from '$types';
+import type { PageData } from './$types';
 
-	let { data }: { data: PageData } = $props();
+let { data }: { data: PageData } = $props();
 
-	const room = createRoom();
+const room = createRoom();
 
-	// Your own current pick (derived from the server state for this user).
-	const myVote = $derived(
-		room.state?.participants.find((p) => p.userId === getUserId())?.vote ?? null
-	);
-	const summary = $derived(room.state ? voteSummary(room.state.participants) : null);
+// Your own current pick (derived from the server state for this user).
+const myVote = $derived(
+	room.state?.participants.find((p) => p.userId === getUserId())?.vote ?? null
+);
+const summary = $derived(room.state ? voteSummary(room.state.participants) : null);
 
-	onMount(() => {
-		const name = getName();
-		if (!name) {
-			// no name yet → go pick one on the landing page
-			goto(resolve('/'));
-			return;
-		}
-		room.connect(data.roomId, getUserId(), name, getToken());
-	});
-
-	onDestroy(() => {
-		room.disconnect();
-		if (copyTimer) clearTimeout(copyTimer);
-	});
-
-	// Copy the room link, then flip the button to a short-lived "Kopiert" state
-	// before returning to the default. Falls back to execCommand so it also
-	// works over plain http on a LAN (where navigator.clipboard is unavailable).
-	let copied = $state(false);
-	let copyTimer: ReturnType<typeof setTimeout> | null = null;
-
-	async function copyLink() {
-		const url = window.location.href;
-		let ok = false;
-		try {
-			if (navigator.clipboard?.writeText) {
-				await navigator.clipboard.writeText(url);
-				ok = true;
-			}
-		} catch {
-			ok = false;
-		}
-		if (!ok) ok = legacyCopy(url);
-		if (!ok) return;
-		copied = true;
-		if (copyTimer) clearTimeout(copyTimer);
-		copyTimer = setTimeout(() => (copied = false), 1600);
+onMount(() => {
+	const name = getName();
+	if (!name) {
+		// no name yet → go pick one on the landing page
+		goto(resolve('/'));
+		return;
 	}
+	room.connect(data.roomId, getUserId(), name, getToken());
+});
 
-	// --- Jira: current ticket + write story points (moderator form) ---
-	let jiraLink = $state('');
-	let jiraPoints = $state<number | undefined>(undefined);
-	let jiraBusy = $state(false);
-	let jiraStatus = $state<{ ok: boolean; text: string } | null>(null);
+onDestroy(() => {
+	room.disconnect();
+	if (copyTimer) clearTimeout(copyTimer);
+});
 
-	const ticketKey = $derived(room.state?.ticket ? parseIssueKey(room.state.ticket) : null);
-	const canSubmit = $derived(parseIssueKey(jiraLink) !== null && isStoryPointValue(jiraPoints));
+// Copy the room link, then flip the button to a short-lived "Kopiert" state
+// before returning to the default. Falls back to execCommand so it also
+// works over plain http on a LAN (where navigator.clipboard is unavailable).
+let copied = $state(false);
+let copyTimer: ReturnType<typeof setTimeout> | null = null;
 
-	// Seed the link input from the broadcast ticket (e.g. moderator rejoined).
-	$effect(() => {
-		const ticket = room.state?.ticket;
-		if (ticket && !jiraLink) jiraLink = ticket;
-	});
-
-	// After a reveal, prefill the points with the Fibonacci value nearest to
-	// the round's average.
-	$effect(() => {
-		if (room.state?.revealed && summary?.average != null && jiraPoints == null) {
-			jiraPoints = nearestStoryPointValue(summary.average);
+async function copyLink() {
+	const url = window.location.href;
+	let ok = false;
+	try {
+		if (navigator.clipboard?.writeText) {
+			await navigator.clipboard.writeText(url);
+			ok = true;
 		}
-	});
-
-	// Broadcast the ticket to the whole room (existing setTicket WS flow).
-	function shareTicket() {
-		jiraStatus = null;
-		room.setTicket(jiraLink.trim());
+	} catch {
+		ok = false;
 	}
+	if (!ok) ok = legacyCopy(url);
+	if (!ok) return;
+	copied = true;
+	if (copyTimer) clearTimeout(copyTimer);
+	copyTimer = setTimeout(() => (copied = false), 1600);
+}
 
-	async function submitStoryPoints(e: SubmitEvent) {
-		e.preventDefault();
-		if (!canSubmit || jiraBusy) return;
-		jiraBusy = true;
-		jiraStatus = null;
-		try {
-			const headers: Record<string, string> = { 'content-type': 'application/json' };
-			const token = getToken();
-			if (token) headers.authorization = `Bearer ${token}`;
-			const res = await fetch(resolve('/api/jira/story-points'), {
-				method: 'POST',
-				headers,
-				body: JSON.stringify({ issue: jiraLink.trim(), points: jiraPoints })
-			});
-			const data = await res.json().catch(() => null);
-			jiraStatus = res.ok
-				? {
-						ok: true,
-						text: data?.transitioned
-							? `${data?.points} Punkte → ${data?.issueKey} gespeichert, Status: Refined ✓`
-							: `${data?.points} Punkte → ${data?.issueKey} gespeichert ✓ (Status unverändert)`
-					}
-				: { ok: false, text: data?.message ?? `Fehler ${res.status}` };
-		} catch {
-			jiraStatus = { ok: false, text: 'Netzwerkfehler — bitte nochmal versuchen' };
-		} finally {
-			jiraBusy = false;
-		}
-	}
+// --- Jira: current ticket + write story points (moderator form) ---
+let jiraLink = $state('');
+let jiraPoints = $state<number | undefined>(undefined);
+let jiraBusy = $state(false);
+let jiraStatus = $state<{ ok: boolean; text: string } | null>(null);
 
-	function legacyCopy(text: string): boolean {
-		try {
-			const ta = document.createElement('textarea');
-			ta.value = text;
-			ta.style.position = 'fixed';
-			ta.style.opacity = '0';
-			document.body.appendChild(ta);
-			ta.select();
-			const ok = document.execCommand('copy');
-			document.body.removeChild(ta);
-			return ok;
-		} catch {
-			return false;
-		}
+const ticketKey = $derived(room.state?.ticket ? parseIssueKey(room.state.ticket) : null);
+const canSubmit = $derived(parseIssueKey(jiraLink) !== null && isStoryPointValue(jiraPoints));
+
+// Seed the link input from the broadcast ticket (e.g. moderator rejoined).
+$effect(() => {
+	const ticket = room.state?.ticket;
+	if (ticket && !jiraLink) jiraLink = ticket;
+});
+
+// After a reveal, prefill the points with the Fibonacci value nearest to
+// the round's average.
+$effect(() => {
+	if (room.state?.revealed && summary?.average != null && jiraPoints == null) {
+		jiraPoints = nearestStoryPointValue(summary.average);
 	}
+});
+
+// Broadcast the ticket to the whole room (existing setTicket WS flow).
+function shareTicket() {
+	jiraStatus = null;
+	room.setTicket(jiraLink.trim());
+}
+
+async function submitStoryPoints(e: SubmitEvent) {
+	e.preventDefault();
+	if (!canSubmit || jiraBusy) return;
+	jiraBusy = true;
+	jiraStatus = null;
+	try {
+		const headers: Record<string, string> = { 'content-type': 'application/json' };
+		const token = getToken();
+		if (token) headers.authorization = `Bearer ${token}`;
+		const res = await fetch(resolve('/api/jira/story-points'), {
+			method: 'POST',
+			headers,
+			body: JSON.stringify({ issue: jiraLink.trim(), points: jiraPoints })
+		});
+		const data = await res.json().catch(() => null);
+		jiraStatus = res.ok
+			? {
+					ok: true,
+					text: data?.transitioned
+						? `${data?.points} Punkte → ${data?.issueKey} gespeichert, Status: Refined ✓`
+						: `${data?.points} Punkte → ${data?.issueKey} gespeichert ✓ (Status unverändert)`
+				}
+			: { ok: false, text: data?.message ?? `Fehler ${res.status}` };
+	} catch {
+		jiraStatus = { ok: false, text: 'Netzwerkfehler — bitte nochmal versuchen' };
+	} finally {
+		jiraBusy = false;
+	}
+}
+
+function legacyCopy(text: string): boolean {
+	try {
+		const ta = document.createElement('textarea');
+		ta.value = text;
+		ta.style.position = 'fixed';
+		ta.style.opacity = '0';
+		document.body.appendChild(ta);
+		ta.select();
+		const ok = document.execCommand('copy');
+		document.body.removeChild(ta);
+		return ok;
+	} catch {
+		return false;
+	}
+}
 </script>
 
 <header class="room-head">

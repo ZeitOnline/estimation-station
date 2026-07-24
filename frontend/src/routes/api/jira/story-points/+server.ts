@@ -12,7 +12,6 @@
 import { error, json } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { env } from '$env/dynamic/private';
-import type { RequestHandler } from './$types';
 import {
 	JiraError,
 	jiraConfig,
@@ -20,8 +19,9 @@ import {
 	setStoryPoints,
 	transitionTo
 } from '$lib/server/jira/jira';
-import { STORY_POINT_VALUES, isStoryPointValue } from '$lib/story-points';
-import { authorize, makeVerifier, type AuthPolicy } from '$lib/server/poker/auth';
+import { type AuthPolicy, authorize, makeVerifier } from '$lib/server/poker/auth';
+import { isStoryPointValue, STORY_POINT_VALUES } from '$lib/story-points';
+import type { RequestHandler } from './$types';
 
 // `$env/dynamic/private` (not raw process.env): it also picks up frontend/.env
 // in dev, where Vite does not populate process.env.
@@ -58,12 +58,9 @@ export const POST: RequestHandler = async ({ request }) => {
 	if (verify) {
 		const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
 		if (!token) error(401, 'authentication required');
-		let claims;
-		try {
-			claims = await verify(token);
-		} catch (err) {
-			error(401, `invalid token: ${err instanceof Error ? err.message : String(err)}`);
-		}
+		const claims = await verify(token).catch((err: unknown) =>
+			error(401, `invalid token: ${err instanceof Error ? err.message : String(err)}`)
+		);
 		const decision = authorize(claims, buildPolicy());
 		if (!decision.ok) error(403, `access denied: ${decision.reason}`);
 	}

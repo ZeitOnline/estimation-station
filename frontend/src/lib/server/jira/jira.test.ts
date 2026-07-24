@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+	type JiraConfig,
 	JiraError,
 	jiraConfig,
 	parseIssueKey,
 	setStoryPoints,
-	transitionTo,
-	type JiraConfig
+	transitionTo
 } from './jira';
 
 describe('parseIssueKey', () => {
@@ -79,7 +79,7 @@ describe('setStoryPoints', () => {
 		expect(seenInit.method).toBe('PUT');
 		expect(JSON.parse(String(seenInit.body))).toEqual({ fields: { customfield_10001: 5 } });
 		expect(new Headers(seenInit.headers).get('authorization')).toBe(
-			'Basic ' + Buffer.from('bot@zeit.de:secret').toString('base64')
+			`Basic ${Buffer.from('bot@zeit.de:secret').toString('base64')}`
 		);
 	});
 
@@ -135,7 +135,9 @@ describe('transitionTo', () => {
 		await expect(transitionTo(cfg, 'ENG-958', 'refined', fetchFn)).resolves.toBe(true);
 
 		expect(calls).toHaveLength(2);
-		expect(calls[0].url).toBe('https://zeit-online.atlassian.net/rest/api/3/issue/ENG-958/transitions');
+		expect(calls[0].url).toBe(
+			'https://zeit-online.atlassian.net/rest/api/3/issue/ENG-958/transitions'
+		);
 		expect(calls[1].init?.method).toBe('POST');
 		expect(JSON.parse(String(calls[1].init?.body))).toEqual({ transition: { id: '21' } });
 	});

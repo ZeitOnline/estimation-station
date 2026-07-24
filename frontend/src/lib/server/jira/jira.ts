@@ -43,7 +43,7 @@ export class JiraError extends Error {
 
 function headers(cfg: JiraConfig): Record<string, string> {
 	return {
-		authorization: 'Basic ' + Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString('base64'),
+		authorization: `Basic ${Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString('base64')}`,
 		'content-type': 'application/json',
 		accept: 'application/json'
 	};

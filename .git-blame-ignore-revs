@@ -1,0 +1,7 @@
+# Formatting-only commits, hidden from git blame so line history stays with
+# the actual authors. GitHub's blame view reads this file automatically;
+# locally, opt in once with:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Only full 40-char hashes of commits on main belong here (with squash
+# merges that is the squash commit, known after the PR lands).
