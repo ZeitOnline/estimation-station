@@ -1,31 +1,31 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
-	import { onMount } from 'svelte';
-	import { Icon } from '$components';
-	import { getName } from '$lib/poker/identity';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
+import { Icon } from '$components';
+import { getName } from '$lib/poker/identity';
 
-	let name = $state('');
-	let roomNumber = $state('');
-	let error = $state('');
+let name = $state('');
+let roomNumber = $state('');
+let error = $state('');
 
-	onMount(() => {
-		name = getName();
-	});
+onMount(() => {
+	name = getName();
+});
 
-	function join() {
-		const id = roomNumber.trim();
-		if (!id) {
-			error = 'Bitte gib eine Raumnummer ein.';
-			return;
-		}
-		goto(resolve('/room/[id]', { id: encodeURIComponent(id) }));
+function join() {
+	const id = roomNumber.trim();
+	if (!id) {
+		error = 'Bitte gib eine Raumnummer ein.';
+		return;
 	}
+	goto(resolve('/room/[id]', { id: encodeURIComponent(id) }));
+}
 
-	function create() {
-		const id = String(Math.floor(10000 + Math.random() * 90000)); // 5-digit room
-		goto(resolve('/room/[id]', { id }));
-	}
+function create() {
+	const id = String(Math.floor(10000 + Math.random() * 90000)); // 5-digit room
+	goto(resolve('/room/[id]', { id }));
+}
 </script>
 
 <header class="hero">

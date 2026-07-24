@@ -1,7 +1,7 @@
 <script lang="ts">
-	import type { RoomState } from '$types';
+import type { RoomState } from '$types';
 
-	let { room }: { room: RoomState } = $props();
+let { room }: { room: RoomState } = $props();
 </script>
 
 <ul class="participants">

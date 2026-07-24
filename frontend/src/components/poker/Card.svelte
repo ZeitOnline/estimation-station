@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { Card } from '$types';
+import type { Card } from '$types';
 
-	let {
-		value,
-		selected = false,
-		onpick
-	}: { value: Card; selected?: boolean; onpick: (v: Card) => void } = $props();
+let {
+	value,
+	selected = false,
+	onpick
+}: { value: Card; selected?: boolean; onpick: (v: Card) => void } = $props();
 </script>
 
 <button class="card" class:card--selected={selected} onclick={() => onpick(value)}>

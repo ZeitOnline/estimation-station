@@ -26,13 +26,26 @@
 
 import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
-import { WebSocketServer, WebSocket, type RawData } from 'ws';
-import { Rooms } from './rooms';
-import { authorize, identityFromClaims, makeVerifier, type AuthPolicy } from './auth';
+import { type RawData, type WebSocket, WebSocketServer } from 'ws';
+import type { Card } from '../../../types';
 import { WS_PATH } from '../../poker/ws-path';
+import { type AuthPolicy, authorize, identityFromClaims, makeVerifier } from './auth';
+import { Rooms } from './rooms';
 
 const HEARTBEAT_MS = 30_000;
 const SWEEP_MS = 60_000;
+
+// What a client may send (see protocol above); handlers validate the fields
+// they actually use, since this comes straight out of JSON.parse.
+interface ClientMessage {
+	type?: string;
+	roomId?: string;
+	userId?: string;
+	name?: string;
+	token?: string;
+	card?: Card;
+	title?: string;
+}
 
 // A socket carries the identity it established at `join`.
 interface PokerSocket extends WebSocket {
@@ -51,7 +64,9 @@ interface PokerGlobal {
 	heartbeat: ReturnType<typeof setInterval>;
 	sweeper: ReturnType<typeof setInterval>;
 }
-const globalStore = globalThis as typeof globalThis & { [WSS_KEY]?: PokerGlobal };
+const globalStore = globalThis as typeof globalThis & {
+	[WSS_KEY]?: PokerGlobal;
+};
 
 // --- Auth config (all env-driven; off by default so local dev just works) ---
 // AUTH_MODE=oidc turns on real token verification; anything else = trust client.
@@ -126,7 +141,7 @@ export function createWSSGlobalInstance(): WebSocketServer {
 		});
 
 		ws.on('message', async (raw: RawData) => {
-			let msg;
+			let msg: ClientMessage;
 			try {
 				msg = JSON.parse(raw.toString());
 			} catch {
@@ -144,18 +159,27 @@ export function createWSSGlobalInstance(): WebSocketServer {
 				let name = msg.name;
 				if (verify) {
 					if (!msg.token) {
-						return send(ws, { type: 'error', message: 'authentication required' });
+						return send(ws, {
+							type: 'error',
+							message: 'authentication required'
+						});
 					}
-					let claims;
+					let claims: Record<string, unknown>;
 					try {
 						claims = await verify(msg.token);
 					} catch (err) {
 						const message = err instanceof Error ? err.message : String(err);
-						return send(ws, { type: 'error', message: `invalid token: ${message}` });
+						return send(ws, {
+							type: 'error',
+							message: `invalid token: ${message}`
+						});
 					}
 					const decision = authorize(claims, policy);
 					if (!decision.ok) {
-						return send(ws, { type: 'error', message: `access denied: ${decision.reason}` });
+						return send(ws, {
+							type: 'error',
+							message: `access denied: ${decision.reason}`
+						});
 					}
 					({ userId, name } = identityFromClaims(claims));
 				}
@@ -165,8 +189,12 @@ export function createWSSGlobalInstance(): WebSocketServer {
 
 				ws.userId = String(userId);
 				ws.roomId = String(msg.roomId);
-				if (!connections.has(ws.roomId)) connections.set(ws.roomId, new Set());
-				connections.get(ws.roomId)!.add(ws);
+				let roomConnections = connections.get(ws.roomId);
+				if (!roomConnections) {
+					roomConnections = new Set();
+					connections.set(ws.roomId, roomConnections);
+				}
+				roomConnections.add(ws);
 				rooms.join(ws.roomId, ws.userId, name);
 				return broadcast(ws.roomId);
 			}
@@ -177,6 +205,9 @@ export function createWSSGlobalInstance(): WebSocketServer {
 
 			switch (msg.type) {
 				case 'vote':
+					if (msg.card === undefined) {
+						return send(ws, { type: 'error', message: 'vote requires card' });
+					}
 					rooms.vote(ws.roomId, ws.userId, msg.card);
 					break;
 				case 'reveal':
@@ -186,13 +217,19 @@ export function createWSSGlobalInstance(): WebSocketServer {
 					rooms.reset(ws.roomId, ws.userId);
 					break;
 				case 'setTicket':
+					if (msg.title === undefined) {
+						return send(ws, { type: 'error', message: 'setTicket requires title' });
+					}
 					rooms.setTicket(ws.roomId, ws.userId, msg.title);
 					break;
 				case 'takeOver':
 					rooms.takeOver(ws.roomId, ws.userId);
 					break;
 				default:
-					return send(ws, { type: 'error', message: `unknown type: ${msg.type}` });
+					return send(ws, {
+						type: 'error',
+						message: `unknown type: ${msg.type}`
+					});
 			}
 			broadcast(ws.roomId);
 		});

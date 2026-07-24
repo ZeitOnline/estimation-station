@@ -55,7 +55,7 @@ export async function setStoryPoints(
 	const res = await fetchFn(`${cfg.baseUrl}/rest/api/3/issue/${issueKey}`, {
 		method: 'PUT',
 		headers: {
-			authorization: 'Basic ' + Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString('base64'),
+			authorization: `Basic ${Buffer.from(`${cfg.email}:${cfg.apiToken}`).toString('base64')}`,
 			'content-type': 'application/json',
 			accept: 'application/json'
 		},

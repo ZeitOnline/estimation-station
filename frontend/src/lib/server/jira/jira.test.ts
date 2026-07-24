@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { JiraError, jiraConfig, parseIssueKey, setStoryPoints, type JiraConfig } from './jira';
+import { type JiraConfig, JiraError, jiraConfig, parseIssueKey, setStoryPoints } from './jira';
 
 describe('parseIssueKey', () => {
 	it('extracts the key from a browse link', () => {
@@ -72,7 +72,7 @@ describe('setStoryPoints', () => {
 		expect(seenInit.method).toBe('PUT');
 		expect(JSON.parse(String(seenInit.body))).toEqual({ fields: { customfield_10001: 5 } });
 		expect(new Headers(seenInit.headers).get('authorization')).toBe(
-			'Basic ' + Buffer.from('bot@zeit.de:secret').toString('base64')
+			`Basic ${Buffer.from('bot@zeit.de:secret').toString('base64')}`
 		);
 	});
 

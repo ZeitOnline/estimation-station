@@ -58,7 +58,8 @@
 	--z-ds-border-radius-4: 0.25rem;
 	--z-ds-border-radius-8: 0.5rem;
 	--z-ds-boxshadow-base: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.05);
-	--z-ds-boxshadow-tooltip: 0 0 1px rgba(0, 0, 0, 0.2), 0 0 1.25rem rgba(0, 0, 0, 0.05);
+	--z-ds-boxshadow-tooltip:
+		0 0 1px rgba(0, 0, 0, 0.2), 0 0 1.25rem rgba(0, 0, 0, 0.05);
 	--z-ds-filter-tooltip: drop-shadow(0 0 1px rgba(0, 0, 0, 0.2))
 		drop-shadow(0 0 1.25rem rgba(0, 0, 0, 0.05));
 	--z-ds-space-4: 0.25rem;
