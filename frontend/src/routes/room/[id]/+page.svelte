@@ -3,6 +3,7 @@ import { onDestroy, onMount, untrack } from 'svelte';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { Card, Icon, Participants } from '$components';
+import { authFetch, SessionExpiredError } from '$lib/auth-fetch';
 import { parseIssueKey } from '$lib/jira-link';
 import { getName, getToken, getUserId } from '$lib/poker/identity';
 import { createRoom } from '$lib/poker/room.svelte';
@@ -84,12 +85,9 @@ $effect(() => {
 	if (!key) return;
 	const timer = setTimeout(async () => {
 		try {
-			const headers: Record<string, string> = {};
-			const token = getToken();
-			if (token) headers.authorization = `Bearer ${token}`;
-			const res = await fetch(`${resolve('/api/jira/preview')}?issue=${encodeURIComponent(key)}`, {
-				headers
-			});
+			const res = await authFetch(
+				`${resolve('/api/jira/preview')}?issue=${encodeURIComponent(key)}`
+			);
 			if (!res.ok) return;
 			const data = await res.json();
 			// ticketKey may have moved on while the request was in flight
@@ -146,12 +144,9 @@ async function submitStoryPoints(e: SubmitEvent) {
 	jiraBusy = true;
 	jiraStatus = null;
 	try {
-		const headers: Record<string, string> = { 'content-type': 'application/json' };
-		const token = getToken();
-		if (token) headers.authorization = `Bearer ${token}`;
-		const res = await fetch(resolve('/api/jira/story-points'), {
+		const res = await authFetch(resolve('/api/jira/story-points'), {
 			method: 'POST',
-			headers,
+			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ issue: jiraLink.trim(), points: jiraPoints })
 		});
 		const data = await res.json().catch(() => null);
@@ -164,8 +159,11 @@ async function submitStoryPoints(e: SubmitEvent) {
 							`${data?.transitionError ? `: ${data.transitionError}` : ''})`
 				}
 			: { ok: false, text: data?.message ?? `Fehler ${res.status}` };
-	} catch {
-		jiraStatus = { ok: false, text: 'Netzwerkfehler — bitte nochmal versuchen' };
+	} catch (err) {
+		jiraStatus =
+			err instanceof SessionExpiredError
+				? { ok: false, text: 'Sitzung abgelaufen — Seite neu laden und anmelden' }
+				: { ok: false, text: 'Netzwerkfehler — bitte nochmal versuchen' };
 	} finally {
 		jiraBusy = false;
 	}
