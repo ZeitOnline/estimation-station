@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/ZeitOnline/estimation-station/compare/0.9.0...0.9.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* **ci:** stop cancelling in-progress main runs ([#24](https://github.com/ZeitOnline/estimation-station/issues/24)) ([7fb558c](https://github.com/ZeitOnline/estimation-station/commit/7fb558cc8f70e54fd9c9a5250a9f1feb8af77f23))
+
 ## [0.9.0](https://github.com/ZeitOnline/estimation-station/compare/0.8.0...0.9.0) (2026-07-29)
 
 
