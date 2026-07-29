@@ -18,3 +18,22 @@ export function parseIssueKey(input: string): string | null {
 		return null;
 	}
 }
+
+/** Browse URL for an issue key on the given Jira base URL. */
+export function issueBrowseUrl(baseUrl: string, key: string): string {
+	return `${baseUrl.replace(/\/+$/, '')}/browse/${key}`;
+}
+
+/**
+ * Canonical form of whatever was typed into the ticket field, so a bare key and
+ * a browse link end up as the same room ticket: a browse link when we recognise
+ * an issue key and know the Jira base URL, the bare key when we don't, and the
+ * trimmed text as-is for free-form titles. Empty input (field cleared) is null.
+ */
+export function normalizeTicket(input: string, baseUrl?: string | null): string | null {
+	const trimmed = input.trim();
+	if (!trimmed) return null;
+	const key = parseIssueKey(trimmed);
+	if (!key) return trimmed;
+	return baseUrl ? issueBrowseUrl(baseUrl, key) : key;
+}
