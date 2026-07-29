@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/ZeitOnline/estimation-station/compare/0.9.1...0.9.2) (2026-07-29)
+
+
+### Bug Fixes
+
+* **ci:** refuse to promote an image that predates the release ([#26](https://github.com/ZeitOnline/estimation-station/issues/26)) ([b292d6a](https://github.com/ZeitOnline/estimation-station/commit/b292d6a96c45cb4f1a7af89638c31a8e68969992))
+
 ## [0.9.1](https://github.com/ZeitOnline/estimation-station/compare/0.9.0...0.9.1) (2026-07-29)
 
 
