@@ -6,7 +6,12 @@ on:
       - 'main'
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Queue main runs, never cancel them: every push here either builds a staging
+  # image or promotes one. Merging a feature PR and then its release PR starts
+  # two runs in a row — with cancel-in-progress the feature build died before
+  # pushing its image, and the release promoted the previously built (stale)
+  # image instead. That silently shipped old code under a new version tag.
+  cancel-in-progress: false
 jobs:
   linter:
     uses: zeitonline/gh-action-workflows/.github/workflows/lefthook.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
