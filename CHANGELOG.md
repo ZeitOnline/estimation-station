@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.3](https://github.com/ZeitOnline/estimation-station/compare/0.9.2...0.9.3) (2026-07-29)
+
+
+### Bug Fixes
+
+* update Jira section header ([#29](https://github.com/ZeitOnline/estimation-station/issues/29)) ([6e5af6f](https://github.com/ZeitOnline/estimation-station/commit/6e5af6fedb8e7a5bb4240d65f66aa5857752bbba))
+
 ## [0.9.2](https://github.com/ZeitOnline/estimation-station/compare/0.9.1...0.9.2) (2026-07-29)
 
 
