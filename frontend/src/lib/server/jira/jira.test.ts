@@ -3,6 +3,7 @@ import {
 	type JiraConfig,
 	JiraError,
 	jiraConfig,
+	normalizeTicket,
 	parseIssueKey,
 	setStoryPoints,
 	transitionTo
@@ -30,6 +31,38 @@ describe('parseIssueKey', () => {
 		expect(parseIssueKey('see ENG-958 maybe')).toBeNull();
 		expect(parseIssueKey('https://zeit.de/index')).toBeNull();
 		expect(parseIssueKey('https://zeit-online.atlassian.net/browse/')).toBeNull();
+	});
+});
+
+describe('normalizeTicket', () => {
+	const base = 'https://zeit-online.atlassian.net';
+
+	it('turns a bare key and a browse link into the same ticket', () => {
+		expect(normalizeTicket('ENG-935', base)).toBe(`${base}/browse/ENG-935`);
+		expect(normalizeTicket(' eng-935 ', base)).toBe(`${base}/browse/ENG-935`);
+		expect(normalizeTicket(`${base}/browse/ENG-935?focusedCommentId=1`, base)).toBe(
+			`${base}/browse/ENG-935`
+		);
+	});
+
+	it('tolerates a trailing slash on the base URL', () => {
+		expect(normalizeTicket('ENG-935', 'https://zeit-online.atlassian.net/')).toBe(
+			`${base}/browse/ENG-935`
+		);
+	});
+
+	it('keeps the bare key when no base URL is configured', () => {
+		expect(normalizeTicket('eng-935')).toBe('ENG-935');
+		expect(normalizeTicket('eng-935', '')).toBe('ENG-935');
+	});
+
+	it('passes free-form titles through, trimmed', () => {
+		expect(normalizeTicket('  Login flow  ', base)).toBe('Login flow');
+	});
+
+	it('is null for an empty or whitespace-only field (ticket removed)', () => {
+		expect(normalizeTicket('', base)).toBeNull();
+		expect(normalizeTicket('   ', base)).toBeNull();
 	});
 });
 

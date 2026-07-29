@@ -28,7 +28,7 @@ export function jiraConfig(
 
 // Key parsing lives in the client-safe shared module; re-exported here so the
 // server side keeps one import for everything Jira.
-export { parseIssueKey } from '../../jira-link';
+export { issueBrowseUrl, normalizeTicket, parseIssueKey } from '../../jira-link';
 
 /** A non-2xx answer from Jira, with the HTTP status and a readable message. */
 export class JiraError extends Error {

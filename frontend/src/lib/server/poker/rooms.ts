@@ -100,7 +100,8 @@ export class Rooms {
 		});
 	}
 
-	setTicket(roomId: string, userId: string, title: string): Room | null {
+	/** Set (or, with an empty/null title, remove) the room's current ticket. */
+	setTicket(roomId: string, userId: string, title: string | null): Room | null {
 		return this.moderatorAction(roomId, userId, (room) => {
 			room.ticket = title || null;
 		});

@@ -1,5 +1,5 @@
 <script lang="ts">
-import { onDestroy, onMount } from 'svelte';
+import { onDestroy, onMount, untrack } from 'svelte';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 import { Card, Icon, Participants } from '$components';
@@ -68,12 +68,40 @@ let jiraStatus = $state<{ ok: boolean; text: string } | null>(null);
 
 const ticketKey = $derived(room.state?.ticket ? parseIssueKey(room.state.ticket) : null);
 const canSubmit = $derived(parseIssueKey(jiraLink) !== null && isStoryPointValue(jiraPoints));
+// Typed something that is neither a browse link nor a key — say so instead of
+// silently leaving the save button disabled. An empty field is not an error.
+const linkInvalid = $derived(jiraLink.trim() !== '' && parseIssueKey(jiraLink) === null);
 
-// Seed the link input from the broadcast ticket (e.g. moderator rejoined).
+// Mirror the broadcast ticket into the link input (e.g. the moderator rejoined,
+// or someone else set the ticket). Tracked by value, not by "input is empty":
+// re-seeding an empty input would fight the moderator clearing the field.
+let seededTicket: string | null = null;
 $effect(() => {
-	const ticket = room.state?.ticket;
-	if (ticket && !jiraLink) jiraLink = ticket;
+	const ticket = room.state?.ticket ?? null;
+	if (ticket === seededTicket) return;
+	seededTicket = ticket;
+	// Leave the input alone when it already points at that issue — the server
+	// stores the canonical browse link, the moderator may have typed the key.
+	const key = ticket && parseIssueKey(ticket);
+	if (key && key === parseIssueKey(untrack(() => jiraLink))) return;
+	jiraLink = ticket ?? '';
 });
+
+// Broadcast the ticket to the whole room (existing setTicket WS flow). An empty
+// field removes it for everyone.
+function shareTicket() {
+	jiraStatus = null;
+	room.setTicket(jiraLink.trim());
+}
+
+// Explicit "remove ticket": clear the input, drop the ticket for the room, and
+// forget the pending points so the next round starts clean.
+function clearTicket() {
+	jiraLink = '';
+	jiraPoints = undefined;
+	jiraStatus = null;
+	room.setTicket('');
+}
 
 // After a reveal, prefill the points with the Fibonacci value nearest to
 // the round's average.
@@ -82,12 +110,6 @@ $effect(() => {
 		jiraPoints = nearestStoryPointValue(summary.average);
 	}
 });
-
-// Broadcast the ticket to the whole room (existing setTicket WS flow).
-function shareTicket() {
-	jiraStatus = null;
-	room.setTicket(jiraLink.trim());
-}
 
 async function submitStoryPoints(e: SubmitEvent) {
 	e.preventDefault();
@@ -216,14 +238,28 @@ function legacyCopy(text: string): boolean {
 		<section class="jira">
 			<h2 class="jira__head">Story Points → Jira</h2>
 			<form class="jira__form" onsubmit={submitStoryPoints}>
-				<input
-					class="jira__link"
-					type="text"
-					placeholder="https://zeit-online.atlassian.net/browse/ENG-958"
-					aria-label="Jira-Ticket-Link"
-					bind:value={jiraLink}
-					onchange={shareTicket}
-				/>
+				<div class="jira__field">
+					<input
+						class="jira__link"
+						type="text"
+						placeholder="ENG-958 oder https://…/browse/ENG-958"
+						aria-label="Jira-Ticket: Link oder Ticket-Nummer"
+						aria-invalid={linkInvalid}
+						bind:value={jiraLink}
+						onchange={shareTicket}
+					/>
+					{#if jiraLink !== ''}
+						<button
+							type="button"
+							class="jira__clear"
+							title="Ticket entfernen"
+							aria-label="Ticket entfernen"
+							onclick={clearTicket}
+						>
+							<Icon name="close" size={14} />
+						</button>
+					{/if}
+				</div>
 				<select class="jira__points" aria-label="Story Points" bind:value={jiraPoints}>
 					<option value={undefined} disabled hidden>Punkte</option>
 					{#each STORY_POINT_VALUES as points (points)}
@@ -235,7 +271,11 @@ function legacyCopy(text: string): boolean {
 					{jiraBusy ? 'Speichere…' : 'Punkte speichern'}
 				</button>
 			</form>
-			{#if jiraStatus}
+			{#if linkInvalid}
+				<p class="jira__status jira__status--error">
+					Kein Ticket erkannt — Ticket-Nummer (ENG-958) oder Link (…/browse/ENG-958) eingeben
+				</p>
+			{:else if jiraStatus}
 				<p class="jira__status" class:jira__status--error={!jiraStatus.ok}>{jiraStatus.text}</p>
 			{/if}
 		</section>
@@ -389,8 +429,39 @@ function legacyCopy(text: string): boolean {
 		border-radius: var(--z-ds-radius-s, 6px);
 		font: inherit;
 	}
-	.jira__link {
-		flex: 1 1 16rem;
+	.jira__field {
+		position: relative;
+		display: flex;
+		/* Wide basis so the ticket field takes a row of its own before the
+		   points/save controls wrap next to it. */
+		flex: 1 1 24rem;
+	}
+	/* `.jira input` (class + element) outranks a bare `.jira__link`, so the
+	   padding override has to be scoped too — otherwise its `padding`
+	   shorthand wins and the text runs under the clear button. */
+	.jira .jira__link {
+		flex: 1 1 auto;
+		min-width: 0;
+		/* room for the clear button sitting on top of the field */
+		padding-right: 2.25rem;
+	}
+	.jira__link[aria-invalid='true'] {
+		border-color: var(--z-ds-color-error-70, #bf4040);
+	}
+	/* Overrides the shared `.jira button` look: this one sits inside the field. */
+	.jira .jira__clear {
+		position: absolute;
+		top: 50%;
+		right: 0.35rem;
+		transform: translateY(-50%);
+		padding: 0.25rem;
+		background: transparent;
+		color: var(--z-ds-color-text-70, #444444);
+		border-radius: var(--z-ds-radius-s, 6px);
+	}
+	.jira .jira__clear:hover {
+		color: var(--z-ds-color-text-100, #252525);
+		background: var(--z-ds-color-background-20, #dfdfe1);
 	}
 	.jira__points {
 		width: 6rem;
