@@ -38,16 +38,58 @@ jobs:
       service: frontend
       targets: nodejs
       versions: k8s/staging/versions
+  # Guard for the promote step below. add-tag.yaml checks out the commit that
+  # triggered the run and reads the image tag out of k8s/staging/versions in
+  # *that* tree, so a release PR merged before the staging build's
+  # "ci: update image versions" commit lands promotes the previously built
+  # image — new version number, old code, and nothing anywhere says so.
+  #
+  # The staging tag is a `git describe` (0.9.0-1-g7fb558c), so it names the
+  # commit its image was built from: that commit must be part of this release
+  # and no build-relevant file may have changed since.
+  verify-promoted-image:
+    needs: release-please
+    if: needs.release-please.outputs.release_created
+    runs-on: zon-ubuntu-general-dind
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+      - name: Staging image must be built from this release's code
+        run: |
+          set -euo pipefail
+          tag=$(awk '/newTag:/ { print $2 }' k8s/staging/versions/kustomization.yaml)
+          sha=${tag##*-g}
+          echo "staging image $tag → built from $sha"
+          if ! git cat-file -e "$sha^{commit}" 2>/dev/null; then
+            echo "::error::Cannot resolve commit $sha from staging tag $tag."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$sha" HEAD; then
+            echo "::error::Image $tag was built from $sha, which is not part of this release."
+            exit 1
+          fi
+          # The release commit itself bumps frontend/package.json, so exclude it;
+          # a real dependency change still shows up via package-lock.json.
+          changed=$(git diff --name-only "$sha" HEAD -- \
+            frontend/ Dockerfile ':(exclude)frontend/package.json')
+          if [ -n "$changed" ]; then
+            echo "::error::Image $tag predates code in this release, promoting it would ship old code. Wait for the 'ci: update image versions' commit from the staging build, then cut the release again. Changed since $sha:"
+            echo "$changed"
+            exit 1
+          fi
+          echo "Image $tag matches this release's code."
   # with release: promote images to 'production' and notify
   promote-images:
-    needs: release-please
+    needs: [release-please, verify-promoted-image]
     if: needs.release-please.outputs.release_created
     uses: zeitonline/gh-action-workflows/.github/workflows/add-tag.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
     secrets: inherit
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
+  # Only announce a release that actually reached production.
   notify:
-    needs: release-please
+    needs: [release-please, promote-images]
     if: needs.release-please.outputs.release_created
     uses: zeitonline/gh-action-workflows/.github/workflows/release-notification.yaml@89c86adf124007d97fae113c3e0c176e9c8391c6 # 4.1.0
     secrets: inherit
