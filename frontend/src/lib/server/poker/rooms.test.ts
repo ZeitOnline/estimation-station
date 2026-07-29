@@ -115,6 +115,22 @@ describe('Rooms', () => {
 		expect(p.vote).toBe(13);
 	});
 
+	it('the moderator can set and fully clear the ticket', () => {
+		const rooms = new Rooms();
+		rooms.join('r1', 'alice', 'Alice');
+		rooms.join('r1', 'bob', 'Bob');
+
+		rooms.setTicket('r1', 'alice', 'https://zeit-online.atlassian.net/browse/ENG-935');
+		expect(rooms.get('r1')!.ticket).toBe('https://zeit-online.atlassian.net/browse/ENG-935');
+
+		rooms.setTicket('r1', 'bob', 'ENG-1'); // not the moderator
+		expect(rooms.get('r1')!.ticket).toBe('https://zeit-online.atlassian.net/browse/ENG-935');
+
+		rooms.setTicket('r1', 'alice', null); // cleared field
+		expect(rooms.get('r1')!.ticket).toBe(null);
+		expect(rooms.serialize(rooms.get('r1')!, 'bob').ticket).toBe(null);
+	});
+
 	it('sweep removes empty rooms past TTL', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');

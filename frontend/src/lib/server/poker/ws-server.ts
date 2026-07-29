@@ -28,6 +28,7 @@ import type { IncomingMessage } from 'node:http';
 import type { Duplex } from 'node:stream';
 import { type RawData, type WebSocket, WebSocketServer } from 'ws';
 import type { Card } from '../../../types';
+import { normalizeTicket } from '../../jira-link';
 import { WS_PATH } from '../../poker/ws-path';
 import { type AuthPolicy, authorize, identityFromClaims, makeVerifier } from './auth';
 import { Rooms } from './rooms';
@@ -217,10 +218,17 @@ export function createWSSGlobalInstance(): WebSocketServer {
 					rooms.reset(ws.roomId, ws.userId);
 					break;
 				case 'setTicket':
-					if (msg.title === undefined) {
+					if (typeof msg.title !== 'string') {
 						return send(ws, { type: 'error', message: 'setTicket requires title' });
 					}
-					rooms.setTicket(ws.roomId, ws.userId, msg.title);
+					// A bare key and a browse link mean the same ticket: store the
+					// canonical browse URL when JIRA_BASE_URL is known. An empty
+					// title clears the ticket for the whole room.
+					rooms.setTicket(
+						ws.roomId,
+						ws.userId,
+						normalizeTicket(msg.title, process.env.JIRA_BASE_URL)
+					);
 					break;
 				case 'takeOver':
 					rooms.takeOver(ws.roomId, ws.userId);
