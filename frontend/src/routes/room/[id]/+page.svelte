@@ -72,6 +72,35 @@ const canSubmit = $derived(parseIssueKey(jiraLink) !== null && isStoryPointValue
 // silently leaving the save button disabled. An empty field is not an error.
 const linkInvalid = $derived(jiraLink.trim() !== '' && parseIssueKey(jiraLink) === null);
 
+// Title + description of the broadcast ticket, fetched for everyone in the
+// room so all estimators see what they are voting on. Best-effort: a failed
+// fetch just means no preview (e.g. Jira not configured). The short debounce
+// absorbs rapid ticket changes; the key check drops stale late responses.
+let ticketPreview = $state<{ key: string; summary: string; description: string } | null>(null);
+
+$effect(() => {
+	const key = ticketKey;
+	ticketPreview = null;
+	if (!key) return;
+	const timer = setTimeout(async () => {
+		try {
+			const headers: Record<string, string> = {};
+			const token = getToken();
+			if (token) headers.authorization = `Bearer ${token}`;
+			const res = await fetch(`${resolve('/api/jira/preview')}?issue=${encodeURIComponent(key)}`, {
+				headers
+			});
+			if (!res.ok) return;
+			const data = await res.json();
+			// ticketKey may have moved on while the request was in flight
+			if (data?.key === ticketKey && data?.summary) ticketPreview = data;
+		} catch {
+			// preview is optional — stay quiet
+		}
+	}, 300);
+	return () => clearTimeout(timer);
+});
+
 // Mirror the broadcast ticket into the link input (e.g. the moderator rejoined,
 // or someone else set the ticket). Tracked by value, not by "input is empty":
 // re-seeding an empty input would fight the moderator clearing the field.
@@ -131,7 +160,8 @@ async function submitStoryPoints(e: SubmitEvent) {
 					ok: true,
 					text: data?.transitioned
 						? `${data?.points} Punkte → ${data?.issueKey} gespeichert, Status: Refined ✓`
-						: `${data?.points} Punkte → ${data?.issueKey} gespeichert ✓ (Status unverändert)`
+						: `${data?.points} Punkte → ${data?.issueKey} gespeichert ✓ (Status unverändert` +
+							`${data?.transitionError ? `: ${data.transitionError}` : ''})`
 				}
 			: { ok: false, text: data?.message ?? `Fehler ${res.status}` };
 	} catch {
@@ -182,59 +212,9 @@ function legacyCopy(text: string): boolean {
 {/if}
 
 {#if room.state}
-	{#if room.state.ticket}
-		<p class="ticket">
-			Aktuelles Ticket:
-			{#if room.state.ticket.startsWith('http')}
-				<a href={room.state.ticket} target="_blank" rel="noopener noreferrer">
-					{ticketKey ?? room.state.ticket}
-				</a>
-			{:else}
-				<strong>{room.state.ticket}</strong>
-			{/if}
-		</p>
-	{/if}
-
-	<section class="deck">
-		<h2>Wähle deine Schätzung…</h2>
-		<div class="cards">
-			{#each room.state.deck as value (value)}
-				<Card {value} selected={myVote === value} onpick={(v: CardType) => room.vote(v)} />
-			{/each}
-		</div>
-	</section>
-
-	<section class="table">
-		<div class="table__head">
-			<span>Teilnehmer</span>
-			{#if room.state.revealed && summary}
-				<span class="summary">
-					Ø {summary.average ?? '–'}
-					{#if summary.consensus}· Einigkeit 🎉{/if}
-				</span>
-			{/if}
-		</div>
-		<Participants room={room.state} />
-	</section>
-
-	{#if !room.state.youAreModerator}
-		<section class="controls">
-			<button class="secondary" onclick={() => room.takeOver()}>
-				<Icon name="key" size={16} /> Moderation übernehmen
-			</button>
-		</section>
-	{/if}
-
 	{#if room.state.youAreModerator}
-		<section class="controls">
-			<button class="secondary" onclick={() => room.reset()}>
-				<Icon name="reload" size={16} /> Zurücksetzen
-			</button>
-			<button onclick={() => room.reveal()} disabled={room.state.revealed}>
-				<Icon name="search" size={16} /> Aufdecken
-			</button>
-		</section>
-
+		<!-- The moderator's row: pick the ticket, then save the points. Sits above
+		     the ticket/voting columns because it drives both. -->
 		<section class="jira">
 			<h2 class="jira__head">Story Points → Jira</h2>
 			<form class="jira__form" onsubmit={submitStoryPoints}>
@@ -280,6 +260,78 @@ function legacyCopy(text: string): boolean {
 			{/if}
 		</section>
 	{/if}
+
+	<!-- Wide screens: what we estimate on the left, the estimating itself on the
+	     right. Narrow screens: the same order, stacked. -->
+	<div class="room-grid">
+		<aside class="ticket-col">
+			{#if room.state.ticket}
+				<p class="ticket">
+					Aktuelles Ticket:
+					{#if room.state.ticket.startsWith('http')}
+						<a href={room.state.ticket} target="_blank" rel="noopener noreferrer">
+							{ticketKey ?? room.state.ticket}
+						</a>
+					{:else}
+						<strong>{room.state.ticket}</strong>
+					{/if}
+				</p>
+				{#if ticketPreview}
+					<div class="ticket-preview">
+						<p class="ticket-preview__title">{ticketPreview.summary}</p>
+						{#if ticketPreview.description}
+							<p class="ticket-preview__desc">{ticketPreview.description}</p>
+						{/if}
+					</div>
+				{/if}
+			{:else}
+				<p class="ticket ticket--empty">
+					Noch kein Ticket{room.state.youAreModerator ? ' — oben eintragen' : ''}
+				</p>
+			{/if}
+		</aside>
+
+		<div class="vote-col">
+			<section class="deck">
+				<h2>Wähle deine Schätzung…</h2>
+				<div class="cards">
+					{#each room.state.deck as value (value)}
+						<Card {value} selected={myVote === value} onpick={(v: CardType) => room.vote(v)} />
+					{/each}
+				</div>
+			</section>
+
+			<section class="table">
+				<div class="table__head">
+					<span>Teilnehmer</span>
+					{#if room.state.revealed && summary}
+						<span class="summary">
+							Ø {summary.average ?? '–'}
+							{#if summary.consensus}· Einigkeit 🎉{/if}
+						</span>
+					{/if}
+				</div>
+				<Participants room={room.state} />
+			</section>
+
+			{#if room.state.youAreModerator}
+				<section class="controls">
+					<button class="secondary" onclick={() => room.reset()}>
+						<Icon name="reload" size={16} /> Zurücksetzen
+					</button>
+					<button onclick={() => room.reveal()} disabled={room.state.revealed}>
+						<Icon name="search" size={16} /> Aufdecken
+					</button>
+				</section>
+			{:else}
+				<section class="controls">
+					<button class="secondary" onclick={() => room.takeOver()}>
+						<Icon name="key" size={16} /> Moderation übernehmen
+					</button>
+				</section>
+			{/if}
+		</div>
+	</div>
 {:else}
 	<p>Verbinde mit dem Raum…</p>
 {/if}
@@ -352,14 +404,35 @@ function legacyCopy(text: string): boolean {
 		opacity: 1;
 		transform: none;
 	}
+	/* Two columns from ~62rem up: ticket (left) | voting (right). Below that a
+	   single stack, ticket first. The Jira form is a full-width row of its own,
+	   outside this grid. */
+	.room-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--z-ds-space-xl, 2rem);
+		align-items: start;
+	}
+	@media (min-width: 62rem) {
+		.room-grid {
+			grid-template-columns: minmax(0, 43rem) minmax(0, 1fr);
+			gap: var(--z-ds-space-xl, 2rem) var(--z-ds-space-xxl, 3rem);
+		}
+		/* Long ticket descriptions must not push the deck out of view. */
+		.ticket-col {
+			position: sticky;
+			top: var(--z-ds-space-m, 1rem);
+		}
+	}
 	.deck {
 		margin-bottom: var(--z-ds-space-xl, 2rem);
 	}
 	.cards {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--z-ds-space-xl);
-		margin-top: var(--z-ds-space-xl);
+		justify-content: space-between;
+		gap: var(--z-ds-space-m, 1rem);
+		margin-top: var(--z-ds-space-m, 1rem);
 	}
 	.table__head {
 		display: flex;
@@ -406,12 +479,35 @@ function legacyCopy(text: string): boolean {
 		margin: 0 0 var(--z-ds-space-m, 1rem);
 		color: var(--z-ds-color-text-70, #444444);
 	}
+	.ticket--empty {
+		color: var(--z-ds-color-text-55, #69696c);
+	}
 	.ticket a {
 		color: inherit;
 		font-weight: 600;
 	}
+	.ticket-preview {
+		margin: 0 0 var(--z-ds-space-m, 1rem);
+		padding: var(--z-ds-space-s, 0.75rem);
+		border-left: 3px solid var(--z-ds-color-border-70, #cccccc);
+		background: var(--z-ds-color-background-95, #f6f6f6);
+	}
+	.ticket-preview__title {
+		margin: 0;
+		font-weight: 600;
+		color: var(--z-ds-color-text-100, #252525);
+	}
+	.ticket-preview__desc {
+		margin: var(--z-ds-space-xs, 0.5rem) 0 0;
+		color: var(--z-ds-color-text-70, #444444);
+		font-size: var(--z-ds-font-size-s, 0.875rem);
+		white-space: pre-line;
+	}
+	/* Leading row above the ticket/voting columns, separated by a hairline. */
 	.jira {
-		margin-top: var(--z-ds-space-xl, 2rem);
+		margin-bottom: var(--z-ds-space-l, 1.5rem);
+		padding-bottom: var(--z-ds-space-l, 1.5rem);
+		border-bottom: 1px solid var(--z-ds-color-border-70, #e4e4e4);
 	}
 	.jira__head {
 		margin: 0 0 var(--z-ds-space-s, 0.75rem);

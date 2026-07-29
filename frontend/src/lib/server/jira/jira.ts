@@ -69,40 +69,102 @@ export async function setStoryPoints(
 	throw new JiraError(await errorMessage(res), res.status);
 }
 
+export interface TransitionResult {
+	/** True when the issue was actually moved to the wanted status. */
+	moved: boolean;
+	/** Status names the workflow offers from the issue's current status. */
+	available: string[];
+}
+
 /**
  * Move an issue to the workflow status named `statusName` (e.g. "Refined").
  *
  * Status is not an editable field in Jira — it only changes through workflow
  * transitions, and which transitions exist depends on the issue's *current*
  * status. So: list the transitions available right now, pick the one landing
- * on the wanted status, execute it. Returns true if the issue was moved,
- * false if the workflow offers no transition to that status from here (also
- * the case when the issue is already there). Throws JiraError on HTTP errors.
+ * on the wanted status, execute it. `moved` is false when the workflow offers
+ * no transition to that status from here; `available` then says what it does
+ * offer, which is the only way to tell a misconfigured JIRA_REFINED_STATUS
+ * from a workflow dead end. Throws JiraError on HTTP errors.
  */
 export async function transitionTo(
 	cfg: JiraConfig,
 	issueKey: string,
 	statusName: string,
 	fetchFn: typeof fetch = fetch
-): Promise<boolean> {
+): Promise<TransitionResult> {
 	const url = `${cfg.baseUrl}/rest/api/3/issue/${issueKey}/transitions`;
 	const list = await fetchFn(url, { headers: headers(cfg) });
 	if (!list.ok) throw new JiraError(await errorMessage(list), list.status);
 
 	const body: { transitions?: Array<{ id: string; to?: { name?: string } }> } = await list.json();
+	const transitions = body.transitions ?? [];
+	const available = transitions.map((t) => t.to?.name?.trim()).filter((n): n is string => !!n);
 	const wanted = statusName.trim().toLowerCase();
-	const transition = (body.transitions ?? []).find(
-		(t) => t.to?.name?.trim().toLowerCase() === wanted
-	);
-	if (!transition) return false;
+	const transition = transitions.find((t) => t.to?.name?.trim().toLowerCase() === wanted);
+	if (!transition) return { moved: false, available };
 
 	const res = await fetchFn(url, {
 		method: 'POST',
 		headers: headers(cfg),
 		body: JSON.stringify({ transition: { id: transition.id } })
 	});
-	if (res.ok) return true;
+	if (res.ok) return { moved: true, available };
 	throw new JiraError(await errorMessage(res), res.status);
+}
+
+export interface IssuePreview {
+	key: string;
+	summary: string;
+	description: string;
+}
+
+/**
+ * Plain text from an Atlassian Document Format tree (Jira API v3 returns
+ * descriptions as ADF, not strings). Marks, media and layout are dropped;
+ * block nodes end in a newline so paragraphs and list items stay separated.
+ */
+export function adfToText(node: unknown): string {
+	if (!node || typeof node !== 'object') return '';
+	const n = node as { type?: string; text?: string; content?: unknown[] };
+	if (n.type === 'text') return n.text ?? '';
+	if (n.type === 'hardBreak') return '\n';
+	const inner = (n.content ?? []).map(adfToText).join('');
+	const isBlock = ['paragraph', 'heading', 'listItem', 'taskItem', 'tableRow'].includes(
+		n.type ?? ''
+	);
+	return isBlock ? `${inner}\n` : inner;
+}
+
+/**
+ * Fetch summary + description of one issue for the room preview. Some
+ * projects keep their text in a custom field instead of `description`
+ * (e.g. ENG's "Beschreibung ENG-Task"), so `descriptionFields` is the
+ * ordered list of fields to try — the first non-empty one wins.
+ */
+export async function getIssuePreview(
+	cfg: JiraConfig,
+	issueKey: string,
+	descriptionFields: string[] = ['description'],
+	fetchFn: typeof fetch = fetch
+): Promise<IssuePreview> {
+	const fields = ['summary', ...descriptionFields].join(',');
+	const res = await fetchFn(`${cfg.baseUrl}/rest/api/3/issue/${issueKey}?fields=${fields}`, {
+		headers: headers(cfg)
+	});
+	if (!res.ok) throw new JiraError(await errorMessage(res), res.status);
+
+	const body: { key?: string; fields?: Record<string, unknown> } = await res.json();
+	const summary = typeof body.fields?.summary === 'string' ? body.fields.summary : '';
+	let description = '';
+	for (const field of descriptionFields) {
+		const value = body.fields?.[field];
+		description = (typeof value === 'string' ? value : adfToText(value))
+			.replace(/\n{3,}/g, '\n\n')
+			.trim();
+		if (description) break;
+	}
+	return { key: body.key ?? issueKey, summary, description };
 }
 
 // Jira error bodies look like { errorMessages: [...], errors: { field: msg } }.

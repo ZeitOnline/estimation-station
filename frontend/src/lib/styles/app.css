@@ -29,6 +29,10 @@
 
 :root {
 	--zeit-font: "TabletGothic", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	/* Shared content width: the app body, the masthead and the footer all line
+	   up on it. Wide enough for the room's two-column layout (ticket on the
+	   left, voting on the right). */
+	--page-max: 76rem;
 }
 
 body {
@@ -52,7 +56,7 @@ h3 {
 
 .app {
 	width: 100%;
-	max-width: 42rem;
+	max-width: var(--page-max);
 	margin-inline: auto;
 	padding: var(--z-ds-space-xl, 2rem) var(--z-ds-space-m, 1rem);
 }
