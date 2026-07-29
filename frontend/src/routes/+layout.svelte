@@ -1,6 +1,7 @@
 <script lang="ts">
 import '$lib/styles/app.css';
 import { oidc } from '@zeitonline/svelte-oidc';
+import { WebStorageStateStore } from 'oidc-client-ts';
 import { onMount } from 'svelte';
 import { resolve } from '$app/paths';
 import { ZeitLogo } from '$components';
@@ -16,7 +17,11 @@ onMount(() => {
 	oidc.manage({
 		authority: 'https://openid.zeit.de/realms/zeit-online',
 		client_id: 'estimation-station',
-		redirect_uri: window.location.origin
+		redirect_uri: window.location.origin,
+		// localStorage instead of oidc-client-ts' default sessionStorage: the
+		// session then survives a reload and is shared across tabs, so opening a
+		// room link in a new tab doesn't ask for a login again (same as wally).
+		userStore: new WebStorageStateStore({ store: window.localStorage })
 	});
 });
 </script>
@@ -33,6 +38,10 @@ onMount(() => {
 <div class="app">
 	{#if AUTH_MOCK || oidc.isAuthenticated}
 		{@render children()}
+	{:else if oidc.loading}
+		<!-- Restoring the stored session / renewing silently: don't flash the
+		     login gate at someone who is in fact logged in. -->
+		<p class="login__pending">Anmeldung wird geprüft…</p>
 	{:else}
 		<section class="login">
 			<h1>Anmeldung erforderlich</h1>
@@ -90,6 +99,9 @@ onMount(() => {
 
 	.login {
 		max-width: 30rem;
+	}
+	.login__pending {
+		color: var(--z-ds-color-text-55, #69696c);
 	}
 	.login h1 {
 		margin-bottom: var(--z-ds-space-xs, 0.5rem);
