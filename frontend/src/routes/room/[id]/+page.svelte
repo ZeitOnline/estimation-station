@@ -214,7 +214,7 @@ function legacyCopy(text: string): boolean {
 		<!-- The moderator's row: pick the ticket, then save the points. Sits above
 		     the ticket/voting columns because it drives both. -->
 		<section class="jira">
-			<h2 class="jira__head">Story Points → Jira</h2>
+			<h2 class="jira__head">Ticket</h2>
 			<form class="jira__form" onsubmit={submitStoryPoints}>
 				<div class="jira__field">
 					<input
