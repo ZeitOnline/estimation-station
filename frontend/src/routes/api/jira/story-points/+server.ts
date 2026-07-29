@@ -38,7 +38,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	const points = body.points;
 	if (!isStoryPointValue(points)) {
-		error(400, `points must be a Fibonacci value up to 13 (${STORY_POINT_VALUES.join(', ')})`);
+		error(400, `points must be one of the deck's values (${STORY_POINT_VALUES.join(', ')})`);
 	}
 
 	const cfg = jiraConfig(env);

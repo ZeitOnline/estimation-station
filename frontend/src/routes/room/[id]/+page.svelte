@@ -428,7 +428,6 @@ function legacyCopy(text: string): boolean {
 	.cards {
 		display: flex;
 		flex-wrap: wrap;
-		justify-content: space-between;
 		gap: var(--z-ds-space-m, 1rem);
 		margin-top: var(--z-ds-space-m, 1rem);
 	}

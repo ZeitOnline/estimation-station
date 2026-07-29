@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Card } from '../../../types';
 import { DEFAULT_DECK, Rooms } from './rooms';
 
 describe('Rooms', () => {
@@ -57,7 +58,7 @@ describe('Rooms', () => {
 	it('reset clears votes and hides again', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');
-		rooms.vote('r1', 'alice', 13);
+		rooms.vote('r1', 'alice', 8);
 		rooms.reveal('r1', 'alice');
 		rooms.reset('r1', 'alice');
 		const room = rooms.get('r1')!;
@@ -68,9 +69,15 @@ describe('Rooms', () => {
 	it('cards outside the deck are ignored', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');
-		rooms.vote('r1', 'alice', 7); // 7 is not a Fibonacci card
-		expect(rooms.get('r1')!.participants.get('alice')!.vote).toBe(null);
+		for (const card of [7, 0, 13, '?'] as Card[]) {
+			rooms.vote('r1', 'alice', card);
+			expect(rooms.get('r1')!.participants.get('alice')!.vote).toBe(null);
+		}
 		expect(DEFAULT_DECK.includes(8)).toBe(true);
+	});
+
+	it('deals Fibonacci 1–8, without 0, 13 or "?"', () => {
+		expect(DEFAULT_DECK).toEqual([1, 2, 3, 5, 8]);
 	});
 
 	it('any participant can take over moderation', () => {
@@ -107,12 +114,12 @@ describe('Rooms', () => {
 	it('reconnect keeps identity and vote', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');
-		rooms.vote('r1', 'alice', 13);
+		rooms.vote('r1', 'alice', 8);
 		rooms.disconnect('r1', 'alice');
 		rooms.join('r1', 'alice', 'Alice'); // reconnect
 		const p = rooms.get('r1')!.participants.get('alice')!;
 		expect(p.connected).toBe(true);
-		expect(p.vote).toBe(13);
+		expect(p.vote).toBe(8);
 	});
 
 	it('the moderator can set and fully clear the ticket', () => {
