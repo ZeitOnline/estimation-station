@@ -69,9 +69,21 @@ export const POST: RequestHandler = async ({ request }) => {
 	let transitioned = false;
 	let transitionError: string | undefined;
 	try {
-		transitioned = await transitionTo(cfg, issueKey, refinedStatus);
+		const result = await transitionTo(cfg, issueKey, refinedStatus);
+		transitioned = result.moved;
+		if (!transitioned) {
+			// Name the wanted status and what the workflow does offer — without
+			// this, a JIRA_REFINED_STATUS typo is indistinguishable from a
+			// workflow that has no path to "Refined" from the current status.
+			transitionError =
+				`kein Übergang zu "${refinedStatus}" ab dem aktuellen Status` +
+				(result.available.length ? ` (möglich: ${result.available.join(', ')})` : '');
+		}
 	} catch (err) {
 		transitionError = err instanceof JiraError ? err.message : String(err);
+	}
+	if (transitionError) {
+		console.warn(`[jira] ${issueKey}: status stayed as it was — ${transitionError}`);
 	}
 
 	return json({ ok: true, issueKey, points, transitioned, transitionError });

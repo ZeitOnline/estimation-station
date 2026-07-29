@@ -69,39 +69,47 @@ export async function setStoryPoints(
 	throw new JiraError(await errorMessage(res), res.status);
 }
 
+export interface TransitionResult {
+	/** True when the issue was actually moved to the wanted status. */
+	moved: boolean;
+	/** Status names the workflow offers from the issue's current status. */
+	available: string[];
+}
+
 /**
  * Move an issue to the workflow status named `statusName` (e.g. "Refined").
  *
  * Status is not an editable field in Jira — it only changes through workflow
  * transitions, and which transitions exist depends on the issue's *current*
  * status. So: list the transitions available right now, pick the one landing
- * on the wanted status, execute it. Returns true if the issue was moved,
- * false if the workflow offers no transition to that status from here (also
- * the case when the issue is already there). Throws JiraError on HTTP errors.
+ * on the wanted status, execute it. `moved` is false when the workflow offers
+ * no transition to that status from here; `available` then says what it does
+ * offer, which is the only way to tell a misconfigured JIRA_REFINED_STATUS
+ * from a workflow dead end. Throws JiraError on HTTP errors.
  */
 export async function transitionTo(
 	cfg: JiraConfig,
 	issueKey: string,
 	statusName: string,
 	fetchFn: typeof fetch = fetch
-): Promise<boolean> {
+): Promise<TransitionResult> {
 	const url = `${cfg.baseUrl}/rest/api/3/issue/${issueKey}/transitions`;
 	const list = await fetchFn(url, { headers: headers(cfg) });
 	if (!list.ok) throw new JiraError(await errorMessage(list), list.status);
 
 	const body: { transitions?: Array<{ id: string; to?: { name?: string } }> } = await list.json();
+	const transitions = body.transitions ?? [];
+	const available = transitions.map((t) => t.to?.name?.trim()).filter((n): n is string => !!n);
 	const wanted = statusName.trim().toLowerCase();
-	const transition = (body.transitions ?? []).find(
-		(t) => t.to?.name?.trim().toLowerCase() === wanted
-	);
-	if (!transition) return false;
+	const transition = transitions.find((t) => t.to?.name?.trim().toLowerCase() === wanted);
+	if (!transition) return { moved: false, available };
 
 	const res = await fetchFn(url, {
 		method: 'POST',
 		headers: headers(cfg),
 		body: JSON.stringify({ transition: { id: transition.id } })
 	});
-	if (res.ok) return true;
+	if (res.ok) return { moved: true, available };
 	throw new JiraError(await errorMessage(res), res.status);
 }
 

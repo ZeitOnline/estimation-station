@@ -167,7 +167,10 @@ describe('transitionTo', () => {
 			return new Response(null, { status: 204 });
 		}) as typeof fetch;
 
-		await expect(transitionTo(cfg, 'ENG-958', 'refined', fetchFn)).resolves.toBe(true);
+		await expect(transitionTo(cfg, 'ENG-958', 'refined', fetchFn)).resolves.toEqual({
+			moved: true,
+			available: ['In Progress', 'Refined']
+		});
 
 		expect(calls).toHaveLength(2);
 		expect(calls[0].url).toBe(
@@ -177,11 +180,14 @@ describe('transitionTo', () => {
 		expect(JSON.parse(String(calls[1].init?.body))).toEqual({ transition: { id: '21' } });
 	});
 
-	it('returns false when no transition leads to the status from here', async () => {
+	it('reports the reachable statuses when none of them is the wanted one', async () => {
 		const fetchFn = (async () =>
 			new Response(JSON.stringify(transitions), { status: 200 })) as typeof fetch;
 
-		await expect(transitionTo(cfg, 'ENG-958', 'Done', fetchFn)).resolves.toBe(false);
+		await expect(transitionTo(cfg, 'ENG-958', 'Done', fetchFn)).resolves.toEqual({
+			moved: false,
+			available: ['In Progress', 'Refined']
+		});
 	});
 
 	it('throws a JiraError when listing the transitions fails', async () => {

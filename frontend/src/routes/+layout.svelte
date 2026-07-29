@@ -68,7 +68,7 @@ onMount(() => {
 		background: var(--z-ds-color-background-0, #ffffff);
 	}
 	.masthead__inner {
-		max-width: 42rem;
+		max-width: var(--page-max);
 		margin-inline: auto;
 		padding: var(--z-ds-space-m, 1rem) var(--z-ds-space-m, 1rem) var(--z-ds-space-s, 0.75rem);
 		display: flex;
@@ -118,7 +118,7 @@ onMount(() => {
 		border-top: 1px solid var(--z-ds-color-border-70, #e4e4e4);
 	}
 	.footer__inner {
-		max-width: 42rem;
+		max-width: var(--page-max);
 		margin-inline: auto;
 		padding: var(--z-ds-space-m, 1rem);
 		display: flex;
