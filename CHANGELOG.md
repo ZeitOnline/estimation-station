@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.8.0](https://github.com/ZeitOnline/estimation-station/compare/0.7.0...0.8.0) (2026-07-29)
+
+
+### Features
+
+* add ticket preview functionality with Jira integration ([#19](https://github.com/ZeitOnline/estimation-station/issues/19)) ([afc6eb2](https://github.com/ZeitOnline/estimation-station/commit/afc6eb2ff970e55bd66a2aa0feb540037a2a175b))
+* enhance Jira ticket handling with normalization and improved UX ([#20](https://github.com/ZeitOnline/estimation-station/issues/20)) ([21039ae](https://github.com/ZeitOnline/estimation-station/commit/21039ae4a61d0fe98c187a0529eeb2de93f7b854))
+
 ## [0.7.0](https://github.com/ZeitOnline/estimation-station/compare/0.6.0...0.7.0) (2026-07-24)
 
 
