@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/ZeitOnline/estimation-station/compare/0.8.0...0.9.0) (2026-07-29)
+
+
+### Features
+
+* implement OIDC session management with localStorage ([#22](https://github.com/ZeitOnline/estimation-station/issues/22)) ([c48b2fd](https://github.com/ZeitOnline/estimation-station/commit/c48b2fd80dd23ca4e023ea5d4715ce490059aa2b))
+
 ## [0.8.0](https://github.com/ZeitOnline/estimation-station/compare/0.7.0...0.8.0) (2026-07-29)
 
 
