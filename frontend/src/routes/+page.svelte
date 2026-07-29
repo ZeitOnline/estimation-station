@@ -69,7 +69,6 @@ function create() {
 		display: flex;
 		flex-direction: column;
 		gap: var(--z-ds-space-m, 1rem);
-		max-width: 32rem;
 	}
 	.field {
 		display: flex;
