@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/ZeitOnline/estimation-station/compare/0.9.3...0.10.0) (2026-07-31)
+
+
+### Features
+
+* add a theme switcher and fix dark mode contrast issues ([#31](https://github.com/ZeitOnline/estimation-station/issues/31)) ([82a5347](https://github.com/ZeitOnline/estimation-station/commit/82a534789bd00ebbd511410841786dea8cc92fed))
+
 ## [0.9.3](https://github.com/ZeitOnline/estimation-station/compare/0.9.2...0.9.3) (2026-07-29)
 
 
