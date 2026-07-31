@@ -487,7 +487,7 @@ function legacyCopy(text: string): boolean {
 		margin: 0 0 var(--z-ds-space-m, 1rem);
 		padding: var(--z-ds-space-s, 0.75rem);
 		border-left: 3px solid var(--z-ds-color-border-70, #cccccc);
-		background: var(--z-ds-color-background-95, #f6f6f6);
+		background: var(--z-ds-color-background-10, #eeeeee);
 	}
 	.ticket-preview__title {
 		margin: 0;
@@ -520,6 +520,8 @@ function legacyCopy(text: string): boolean {
 		padding: var(--z-ds-space-xs, 0.5rem);
 		border: 1px solid var(--z-ds-color-background-20, #dfdfe1);
 		border-radius: var(--z-ds-radius-s, 6px);
+		background-color: var(--z-ds-color-background-0, #ffffff);
+		color: var(--z-ds-color-text-100, #252525);
 		font: inherit;
 	}
 	.jira__field {
@@ -562,12 +564,22 @@ function legacyCopy(text: string): boolean {
 		   ourselves, nudged further in from the right edge. */
 		appearance: none;
 		padding-right: 2rem;
-		background-color: transparent;
 		background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13 4L7 10L1 4' stroke='%23262626' stroke-width='1.5'/%3E%3C/svg%3E");
 		background-repeat: no-repeat;
 		background-position: right 0.75rem center;
 		background-size: 12px;
 		cursor: pointer;
+	}
+	/* The chevron's stroke color is baked into the data URI, so it needs a
+	   light-on-dark swap the same way styles-zds.css switches its tokens:
+	   once for the OS-driven "system" theme, once for the explicit toggle. */
+	@media (prefers-color-scheme: dark) {
+		:global(html:not(.color-scheme-light)) .jira__points {
+			background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13 4L7 10L1 4' stroke='%23ffffff' stroke-width='1.5'/%3E%3C/svg%3E");
+		}
+	}
+	:global(html.color-scheme-dark) .jira__points {
+		background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' viewBox='0 0 14 14' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M13 4L7 10L1 4' stroke='%23ffffff' stroke-width='1.5'/%3E%3C/svg%3E");
 	}
 	.jira__status {
 		margin: var(--z-ds-space-xs, 0.5rem) 0 0;

@@ -4,11 +4,13 @@ import { oidc } from '@zeitonline/svelte-oidc';
 import { WebStorageStateStore } from 'oidc-client-ts';
 import { onMount } from 'svelte';
 import { resolve } from '$app/paths';
-import { ZeitLogo } from '$components';
+import { ThemeSwitch, ZeitLogo } from '$components';
 import { env } from '$env/dynamic/public';
 import { AUTH_MOCK } from '$lib/poker/identity';
+import type { LayoutData } from './$types';
 
-let { children }: { children: () => ReturnType<import('svelte').Snippet> } = $props();
+let { data, children }: { data: LayoutData; children: () => ReturnType<import('svelte').Snippet> } =
+	$props();
 
 onMount(() => {
 	// VITE_AUTH_MODE=mock: no real SSO — identity.ts fabricates a per-tab
@@ -31,7 +33,10 @@ onMount(() => {
 		<a href={resolve('/')} class="masthead__logo" aria-label="DIE ZEIT – Startseite">
 			<ZeitLogo width={180} height={27} />
 		</a>
-		<span class="masthead__product">Planning Poker</span>
+		<div class="masthead__end">
+			<span class="masthead__product">Planning Poker</span>
+			<ThemeSwitch currentTheme={data.theme} />
+		</div>
 	</div>
 </header>
 
@@ -88,6 +93,11 @@ onMount(() => {
 	.masthead__logo {
 		color: var(--z-ds-color-text-100, #252525);
 		display: block;
+	}
+	.masthead__end {
+		display: flex;
+		align-items: center;
+		gap: var(--z-ds-space-m, 1rem);
 	}
 	.masthead__product {
 		font-size: var(--z-ds-font-size-s, 0.9rem);
