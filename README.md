@@ -8,8 +8,12 @@ moderator reveals all cards at once — the classic "estimate together, no
 anchoring" flow. Access is gated behind ZEIT SSO so only the team can join.
 
 - **App** — a **SvelteKit** frontend (`frontend/`) with a built-in realtime
-  **WebSocket** layer for live rooms, presence, voting, and reveal/reset.
+  **WebSocket** layer for live rooms, presence, voting, and reveal/reset. Light
+  and dark themes, switchable in the room.
 - **Auth** — ZEIT SSO (Keycloak/OIDC), with an off/mock mode for local dev.
+- **Jira** — type a ticket key/link into a room and it's previewed (title +
+  description); on reveal, the moderator can write the estimate straight to
+  the ticket's Story Points field and move it to "Refined".
 - **Infra sandbox** — the same repo also inlines the ZEIT platform shapes so you
   can learn them: **Docker**, **PostgREST + Postgres**, **Alembic** migrations,
   and **k8s / Tilt**. (Estimation _history_ persistence is a planned use of this
@@ -48,6 +52,27 @@ redirect URI on that client.
 Server-side, set `AUTH_MODE=oidc` (plain env, not `VITE_`) to also verify the
 bearer token on the WebSocket and enforce who may join (email domain /
 Keycloak group) — see `frontend/src/lib/server/poker/auth.ts`.
+
+### Jira integration
+
+Optional and off by default. Set `JIRA_BASE_URL`, `JIRA_EMAIL`,
+`JIRA_API_TOKEN`, and `JIRA_STORY_POINTS_FIELD` (the ticket's per-instance
+Story Points custom field) to turn it on — without all four, the endpoints
+answer `503`. See `frontend/.env.example` for the full list, including the
+optional `JIRA_REFINED_STATUS` and `JIRA_DESCRIPTION_FIELDS`.
+
+Once configured:
+
+- Typing a ticket key or browse link into a room fetches a **preview**
+  (`GET /api/jira/preview`) — summary + description — so everyone can see
+  what's being estimated.
+- On reveal, the moderator can **write the estimate** back
+  (`POST /api/jira/story-points`), which also tries to transition the issue to
+  a "Refined" workflow status.
+
+Both endpoints are server-only (the Jira token never reaches the browser) and,
+in `oidc` mode, require the same bearer token the WebSocket enforces — see
+`frontend/src/lib/server/jira/` and `frontend/src/routes/api/jira/`.
 
 ---
 
@@ -136,9 +161,13 @@ automatically.
 ```
 frontend/            the Planning Poker app (SvelteKit)
   src/routes/          landing page + /room/[id]
+  src/routes/api/jira/ preview + story-points endpoints
   src/lib/poker/       client room store, identity, vote summary
   src/lib/server/poker/  realtime WebSocket: rooms + OIDC auth (in-memory)
+  src/lib/server/jira/ Jira Cloud client (story points, transitions, preview)
+  src/lib/jira-link.ts   issue-key parsing, shared client + server
   src/lib/auth/        OIDC / session wiring
+  src/components/      shared UI (cards, theme switcher, icons, logo)
 docs/
   estimation-poker-plan.md   product spec, roadmap, decisions
 
