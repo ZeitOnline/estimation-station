@@ -20,7 +20,7 @@ let {
 		font-weight: 600;
 		border: 1px solid var(--z-ds-color-border-100, #cccccf);
 		border-radius: var(--z-ds-radius-m, 8px);
-		background: var(--z-ds-color-background-0, #ffffff);
+		background: var(--z-ds-color-background-10, #eeeeee);
 		cursor: pointer;
 		transition:
 			transform 0.08s ease,
