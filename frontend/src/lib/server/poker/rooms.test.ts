@@ -69,7 +69,7 @@ describe('Rooms', () => {
 	it('cards outside the deck are ignored', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');
-		for (const card of [7, 0, 13, '?'] as Card[]) {
+		for (const card of [7, 0, 21, '?'] as Card[]) {
 			rooms.vote('r1', 'alice', card);
 			expect(rooms.get('r1')!.participants.get('alice')!.vote).toBe(null);
 		}
