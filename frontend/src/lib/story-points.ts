@@ -1,4 +1,4 @@
-// Story-point values we accept for Jira: Fibonacci 1–8, the same cards the
+// Story-point values we accept for Jira: Fibonacci 1–13, the same cards the
 // poker deck offers (rooms.ts DEFAULT_DECK). Client-safe — used by the room
 // form (select options) and the API route (validation).
 
