@@ -2,7 +2,7 @@
 // poker deck offers (rooms.ts DEFAULT_DECK). Client-safe — used by the room
 // form (select options) and the API route (validation).
 
-export const STORY_POINT_VALUES = [1, 2, 3, 5, 8] as const;
+export const STORY_POINT_VALUES = [1, 2, 3, 5, 8, 13] as const;
 
 /** True if `value` is one of the allowed Fibonacci story points. */
 export function isStoryPointValue(value: unknown): value is number {
