@@ -76,7 +76,7 @@ describe('Rooms', () => {
 		expect(DEFAULT_DECK.includes(8)).toBe(true);
 	});
 
-	it('deals Fibonacci 1–8, without 0 or "?"', () => {
+	it('deals Fibonacci 1–13, without 0 or "?"', () => {
 		expect(DEFAULT_DECK).toEqual([1, 2, 3, 5, 8, 13]);
 	});
 
