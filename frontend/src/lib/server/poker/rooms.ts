@@ -9,10 +9,10 @@
 
 import type { Card, RoomState } from '../../../types';
 
-// Fibonacci 1–8. No 0, no 13 and no '?': every card has to be a number the
+// Fibonacci 1–13. No 0 and no '?': every card has to be a number the
 // team can actually commit to, and votes must stay in sync with the story
 // points we may write to Jira (see story-points.ts).
-export const DEFAULT_DECK: Card[] = [1, 2, 3, 5, 8];
+export const DEFAULT_DECK: Card[] = [1, 2, 3, 5, 8, 13];
 
 // How long an empty room (nobody connected) lingers before being swept.
 export const ROOM_TTL_MS = 1000 * 60 * 30; // 30 minutes

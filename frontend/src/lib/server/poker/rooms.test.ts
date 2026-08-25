@@ -69,15 +69,15 @@ describe('Rooms', () => {
 	it('cards outside the deck are ignored', () => {
 		const rooms = new Rooms();
 		rooms.join('r1', 'alice', 'Alice');
-		for (const card of [7, 0, 13, '?'] as Card[]) {
+		for (const card of [7, 0, 21, '?'] as Card[]) {
 			rooms.vote('r1', 'alice', card);
 			expect(rooms.get('r1')!.participants.get('alice')!.vote).toBe(null);
 		}
 		expect(DEFAULT_DECK.includes(8)).toBe(true);
 	});
 
-	it('deals Fibonacci 1–8, without 0, 13 or "?"', () => {
-		expect(DEFAULT_DECK).toEqual([1, 2, 3, 5, 8]);
+	it('deals Fibonacci 1–13, without 0 or "?"', () => {
+		expect(DEFAULT_DECK).toEqual([1, 2, 3, 5, 8, 13]);
 	});
 
 	it('any participant can take over moderation', () => {
