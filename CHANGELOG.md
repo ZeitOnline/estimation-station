@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/ZeitOnline/estimation-station/compare/0.10.0...0.11.0) (2026-08-25)
+
+
+### Features
+
+* add beloved 13 story points again ([#34](https://github.com/ZeitOnline/estimation-station/issues/34)) ([846448b](https://github.com/ZeitOnline/estimation-station/commit/846448bd0d371a57fd6ae524d45b3cd6ba7ba083))
+
 ## [0.10.0](https://github.com/ZeitOnline/estimation-station/compare/0.9.3...0.10.0) (2026-07-31)
 
 
