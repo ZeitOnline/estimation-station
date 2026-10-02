@@ -16,7 +16,7 @@
 
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:17-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
     environment:
       POSTGRES_USER: app
       POSTGRES_PASSWORD: app
@@ -45,7 +45,7 @@ services:
     restart: "no"
 
   postgrest:
-    image: postgrest/postgrest:v13.0.8
+    image: postgrest/postgrest:v13.0.8@sha256:d09618df2b7b9547c80a076c2f4045b326be8d7ac06060d263caefec1334e3c9
     environment:
       # PostgREST connects as `authenticator` (created in auth.sql).
       PGRST_DB_URI: "postgres://authenticator:postgrest_pw@postgres:5432/app"
