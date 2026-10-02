@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/ZeitOnline/estimation-station/compare/0.11.0...0.12.0) (2026-10-02)
+
+
+### Features
+
+* update @sveltejs/adapter-node to 6.0.0 and migrate to SvelteKit 3 ([#36](https://github.com/ZeitOnline/estimation-station/issues/36)) ([b67dcad](https://github.com/ZeitOnline/estimation-station/commit/b67dcad1b188683760fee6d1cf7ccc4851331eba))
+
 ## [0.11.0](https://github.com/ZeitOnline/estimation-station/compare/0.10.0...0.11.0) (2026-08-25)
 
 
