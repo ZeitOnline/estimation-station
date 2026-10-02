@@ -9,17 +9,23 @@
 // WebSocket enforces — the browser is never trusted with the write itself.
 // =============================================================================
 
-import { error, json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { requireApiUser } from '$lib/server/api-auth';
+import { error } from '@sveltejs/kit';
+import { requireApiUser } from '#lib/server/api-auth.js';
 import {
 	JiraError,
 	jiraConfig,
 	parseIssueKey,
 	setStoryPoints,
 	transitionTo
-} from '$lib/server/jira/jira';
-import { isStoryPointValue, STORY_POINT_VALUES } from '$lib/story-points';
+} from '#lib/server/jira/jira.js';
+import { isStoryPointValue, STORY_POINT_VALUES } from '#lib/story-points.js';
+import {
+	JIRA_API_TOKEN,
+	JIRA_BASE_URL,
+	JIRA_EMAIL,
+	JIRA_REFINED_STATUS,
+	JIRA_STORY_POINTS_FIELD
+} from '$app/env/private';
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
@@ -41,7 +47,12 @@ export const POST: RequestHandler = async ({ request }) => {
 		error(400, `points must be one of the deck's values (${STORY_POINT_VALUES.join(', ')})`);
 	}
 
-	const cfg = jiraConfig(env);
+	const cfg = jiraConfig({
+		JIRA_BASE_URL,
+		JIRA_EMAIL,
+		JIRA_API_TOKEN,
+		JIRA_STORY_POINTS_FIELD
+	});
 	if (!cfg) {
 		error(
 			503,
@@ -65,7 +76,7 @@ export const POST: RequestHandler = async ({ request }) => {
 	// point, so a transition problem must not fail the request — the workflow
 	// may simply not offer the transition from the ticket's current status
 	// (or the ticket is already Refined). Report what happened instead.
-	const refinedStatus = env.JIRA_REFINED_STATUS || 'Refined';
+	const refinedStatus = JIRA_REFINED_STATUS || 'Refined';
 	let transitioned = false;
 	let transitionError: string | undefined;
 	try {
@@ -86,5 +97,5 @@ export const POST: RequestHandler = async ({ request }) => {
 		console.warn(`[jira] ${issueKey}: status stayed as it was — ${transitionError}`);
 	}
 
-	return json({ ok: true, issueKey, points, transitioned, transitionError });
+	return Response.json({ ok: true, issueKey, points, transitioned, transitionError });
 };

@@ -10,10 +10,16 @@
 // wins — e.g. "customfield_11371,description").
 // =============================================================================
 
-import { error, json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { requireApiUser } from '$lib/server/api-auth';
-import { getIssuePreview, JiraError, jiraConfig, parseIssueKey } from '$lib/server/jira/jira';
+import { error } from '@sveltejs/kit';
+import { requireApiUser } from '#lib/server/api-auth.js';
+import { getIssuePreview, JiraError, jiraConfig, parseIssueKey } from '#lib/server/jira/jira.js';
+import {
+	JIRA_API_TOKEN,
+	JIRA_BASE_URL,
+	JIRA_DESCRIPTION_FIELDS,
+	JIRA_EMAIL,
+	JIRA_STORY_POINTS_FIELD
+} from '$app/env/private';
 import type { RequestHandler } from './$types';
 
 // Previews are teasers, not the full ticket — keep them scannable.
@@ -27,12 +33,17 @@ export const GET: RequestHandler = async ({ request, url }) => {
 		error(400, 'issue must be a Jira link (…/browse/ENG-958) or an issue key');
 	}
 
-	const cfg = jiraConfig(env);
+	const cfg = jiraConfig({
+		JIRA_BASE_URL,
+		JIRA_EMAIL,
+		JIRA_API_TOKEN,
+		JIRA_STORY_POINTS_FIELD
+	});
 	if (!cfg) {
 		error(503, 'Jira ist nicht konfiguriert (siehe docs/jira-story-points-plan.md).');
 	}
 
-	const descriptionFields = (env.JIRA_DESCRIPTION_FIELDS || 'description')
+	const descriptionFields = (JIRA_DESCRIPTION_FIELDS || 'description')
 		.split(',')
 		.map((f) => f.trim())
 		.filter(Boolean);
@@ -43,7 +54,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			preview.description.length > MAX_DESCRIPTION
 				? `${preview.description.slice(0, MAX_DESCRIPTION)}…`
 				: preview.description;
-		return json({ ok: true, key: preview.key, summary: preview.summary, description });
+		return Response.json({ ok: true, key: preview.key, summary: preview.summary, description });
 	} catch (err) {
 		if (err instanceof JiraError) {
 			error(err.status >= 400 && err.status < 500 ? err.status : 502, `Jira: ${err.message}`);

@@ -1,4 +1,4 @@
-import type { Participant } from '$types';
+import type { Participant } from '#types';
 
 export interface Summary {
 	count: number; // how many numeric votes

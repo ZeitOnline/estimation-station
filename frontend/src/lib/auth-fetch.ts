@@ -9,7 +9,7 @@
 // =============================================================================
 
 import { oidc } from '@zeitonline/svelte-oidc';
-import { AUTH_MOCK, getToken } from '$lib/poker/identity';
+import { AUTH_MOCK, getToken } from '#lib/poker/identity.js';
 
 /** Renewal failed — the user has to log in again. */
 export class SessionExpiredError extends Error {

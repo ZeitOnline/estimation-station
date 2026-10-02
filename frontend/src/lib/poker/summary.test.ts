@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Participant } from '$types';
+import type { Participant } from '#types';
 import { voteSummary } from './summary';
 
 const p = (userId: string, vote: Participant['vote']): Participant => ({
