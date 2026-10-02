@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onMount } from 'svelte';
-import { setCookie } from '$lib/cookie';
+import { setCookie } from '#lib/cookie.js';
 
 let { currentTheme }: { currentTheme: Theme } = $props();
 

@@ -1,4 +1,6 @@
+import adapter from '@sveltejs/adapter-node';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { loadEnv, type PluginOption } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { createWSSGlobalInstance, onHttpServerUpgrade } from './src/lib/server/poker/ws-server';
@@ -37,7 +39,15 @@ const realtimeWebSocket: PluginOption = {
 };
 
 export default defineConfig({
-	plugins: [sveltekit(), realtimeWebSocket],
+	plugins: [
+		sveltekit({
+			preprocess: vitePreprocess(),
+			// adapter-node builds a standalone Node server (build/index.js) — this is
+			// the "own node server" SvelteKit gives you for free.
+			adapter: adapter({ out: 'build', precompress: false, envPrefix: '' })
+		}),
+		realtimeWebSocket
+	],
 	test: {
 		globals: true,
 		setupFiles: ['./src/setupTests.ts'],

@@ -1,9 +1,9 @@
 <script lang="ts">
 import { onMount } from 'svelte';
+import { Icon } from '#components';
+import { getName } from '#lib/poker/identity.js';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { Icon } from '$components';
-import { getName } from '$lib/poker/identity';
 
 let name = $state('');
 let roomNumber = $state('');

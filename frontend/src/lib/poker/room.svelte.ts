@@ -1,7 +1,7 @@
-import { browser } from '$app/environment';
+import { WS_PATH } from '#lib/poker/ws-path.js';
+import type { Card, RoomState } from '#types';
+import { browser } from '$app/env';
 import { resolve } from '$app/paths';
-import { WS_PATH } from '$lib/poker/ws-path';
-import type { Card, RoomState } from '$types';
 
 // The realtime server now lives inside this SvelteKit app, so the WebSocket is
 // on the same origin (see src/lib/server/poker/ws-server.ts). `VITE_WS_URL`
@@ -10,8 +10,9 @@ function wsUrl(): string {
 	if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL;
 	const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
 	// WS_PATH is not a SvelteKit route, so it's missing from the generated
-	// Pathname union — the cast lets resolve() prepend the base path anyway.
-	return `${proto}//${location.host}${resolve(WS_PATH as import('$app/types').Pathname)}`;
+	// Path union — the cast lets resolve() prepend the base path anyway. Kit 3
+	// paths carry no leading slash (a leading `/` would mean a route ID).
+	return `${proto}//${location.host}${resolve(WS_PATH.slice(1) as import('$app/types').Path)}`;
 }
 
 // Factory returning a reactive room client. Same shape idea as the ZEIT

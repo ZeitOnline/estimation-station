@@ -8,29 +8,36 @@
 // =============================================================================
 
 import { error } from '@sveltejs/kit';
-import { dev } from '$app/environment';
-import { env } from '$env/dynamic/private';
-import { type AuthPolicy, authorize, makeVerifier } from '$lib/server/poker/auth';
+import { type AuthPolicy, authorize, makeVerifier } from '#lib/server/poker/auth.js';
+import { dev } from '$app/env';
+import {
+	ALLOWED_EMAIL_DOMAINS,
+	ALLOWED_GROUP,
+	AUTH_MODE,
+	OIDC_AUDIENCE,
+	OIDC_ISSUER,
+	OIDC_JWKS_URL
+} from '$app/env/private';
 
-// `$env/dynamic/private` (not raw process.env): it also picks up frontend/.env
-// in dev, where Vite does not populate process.env.
+// `$app/env/private` (not raw process.env): it also picks up frontend/.env
+// in dev, where Vite does not populate process.env. Declared in src/env.ts.
 
 function buildVerifier() {
-	if ((env.AUTH_MODE || 'off') !== 'oidc') return null;
+	if ((AUTH_MODE || 'off') !== 'oidc') return null;
 	return makeVerifier({
-		issuer: env.OIDC_ISSUER || 'https://openid.zeit.de/realms/zeit-online',
-		jwksUrl: env.OIDC_JWKS_URL,
-		audience: env.OIDC_AUDIENCE
+		issuer: OIDC_ISSUER || 'https://openid.zeit.de/realms/zeit-online',
+		jwksUrl: OIDC_JWKS_URL,
+		audience: OIDC_AUDIENCE
 	});
 }
 
 function buildPolicy(): AuthPolicy {
 	return {
-		allowedDomains: (env.ALLOWED_EMAIL_DOMAINS || '')
+		allowedDomains: (ALLOWED_EMAIL_DOMAINS || '')
 			.split(',')
 			.map((d) => d.trim().toLowerCase())
 			.filter(Boolean),
-		allowedGroup: env.ALLOWED_GROUP || undefined
+		allowedGroup: ALLOWED_GROUP || undefined
 	};
 }
 

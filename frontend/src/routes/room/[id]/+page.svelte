@@ -1,15 +1,19 @@
 <script lang="ts">
 import { onDestroy, onMount, untrack } from 'svelte';
+import { Card, Icon, Participants } from '#components';
+import { authFetch, SessionExpiredError } from '#lib/auth-fetch.js';
+import { parseIssueKey } from '#lib/jira-link.js';
+import { getName, getToken, getUserId } from '#lib/poker/identity.js';
+import { createRoom } from '#lib/poker/room.svelte.js';
+import { voteSummary } from '#lib/poker/summary.js';
+import {
+	isStoryPointValue,
+	nearestStoryPointValue,
+	STORY_POINT_VALUES
+} from '#lib/story-points.js';
+import type { Card as CardType } from '#types';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { Card, Icon, Participants } from '$components';
-import { authFetch, SessionExpiredError } from '$lib/auth-fetch';
-import { parseIssueKey } from '$lib/jira-link';
-import { getName, getToken, getUserId } from '$lib/poker/identity';
-import { createRoom } from '$lib/poker/room.svelte';
-import { voteSummary } from '$lib/poker/summary';
-import { isStoryPointValue, nearestStoryPointValue, STORY_POINT_VALUES } from '$lib/story-points';
-import type { Card as CardType } from '$types';
 import type { PageData } from './$types';
 
 let { data }: { data: PageData } = $props();
@@ -86,7 +90,7 @@ $effect(() => {
 	const timer = setTimeout(async () => {
 		try {
 			const res = await authFetch(
-				`${resolve('/api/jira/preview')}?issue=${encodeURIComponent(key)}`
+				`${resolve('api/jira/preview')}?issue=${encodeURIComponent(key)}`
 			);
 			if (!res.ok) return;
 			const data = await res.json();
@@ -144,7 +148,7 @@ async function submitStoryPoints(e: SubmitEvent) {
 	jiraBusy = true;
 	jiraStatus = null;
 	try {
-		const res = await authFetch(resolve('/api/jira/story-points'), {
+		const res = await authFetch(resolve('api/jira/story-points'), {
 			method: 'POST',
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ issue: jiraLink.trim(), points: jiraPoints })
