@@ -10,7 +10,7 @@
 #   docker run -p 3000:3000 app/frontend      # → http://localhost:3000/frontend
 # =============================================================================
 
-FROM node:lts-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553 AS node
+FROM node:lts-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS node
 
 # --- build: install ALL deps and produce build/ (incl. build/server.js) ------
 FROM node AS frontend-builder
