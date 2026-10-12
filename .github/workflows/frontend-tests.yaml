@@ -14,7 +14,7 @@ on:
       - 'testing.yaml'
 jobs:
   build:
-    uses: zeitonline/gh-action-workflows/.github/workflows/build-test-push.yaml@e9d6b5018dbfd5b60023f76a5709be38da403f59 # 4.6.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/build-test-push.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
     with:
       service: frontend
       artifacts: build
