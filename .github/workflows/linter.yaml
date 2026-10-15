@@ -6,9 +6,9 @@ on:
       - 'main'
 jobs:
   commitlint:
-    uses: zeitonline/gh-action-workflows/.github/workflows/commit-lint.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/commit-lint.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
   linter:
-    uses: zeitonline/gh-action-workflows/.github/workflows/lefthook.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/lefthook.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
     with:
       node-version: "lts/*"
       setup-command: |

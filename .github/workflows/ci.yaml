@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   linter:
-    uses: zeitonline/gh-action-workflows/.github/workflows/lefthook.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/lefthook.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
     with:
       node-version: "lts/*"
       setup-command: |
@@ -22,17 +22,17 @@ jobs:
         cd frontend/
         npm install
   k8s:
-    uses: zeitonline/gh-action-workflows/.github/workflows/k8s-validation.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/k8s-validation.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
   # run 'release-please' first
   release-please:
     needs: [linter, k8s]
-    uses: zeitonline/gh-action-workflows/.github/workflows/release-please.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/release-please.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
     secrets: inherit
   # without release: build new images for 'staging'
   build:
     needs: release-please
     if: ${{ ! needs.release-please.outputs.release_created }}
-    uses: zeitonline/gh-action-workflows/.github/workflows/build-test-push.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/build-test-push.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
     secrets: inherit
     with:
       service: frontend
@@ -83,7 +83,7 @@ jobs:
   promote-images:
     needs: [release-please, verify-promoted-image]
     if: needs.release-please.outputs.release_created
-    uses: zeitonline/gh-action-workflows/.github/workflows/add-tag.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/add-tag.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
     secrets: inherit
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
@@ -91,7 +91,7 @@ jobs:
   notify:
     needs: [release-please, promote-images]
     if: needs.release-please.outputs.release_created
-    uses: zeitonline/gh-action-workflows/.github/workflows/release-notification.yaml@f9996e6319d9fe72056ba3eb2d1378748c479f64 # 4.7.0
+    uses: zeitonline/gh-action-workflows/.github/workflows/release-notification.yaml@7767d0d1e24ac7942c2e67ae88a5689b0298049f # 4.7.2
     secrets: inherit
     with:
       environment: production
