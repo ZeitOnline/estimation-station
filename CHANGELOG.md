@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.1](https://github.com/ZeitOnline/estimation-station/compare/0.12.0...0.12.1) (2026-10-22)
+
+
+### Miscellaneous Chores
+
+* upgrade dependencies ([c2d0f3e](https://github.com/ZeitOnline/estimation-station/commit/c2d0f3e930bf1be7bfa7ca83abb2865fd6d79dfd))
+
 ## [0.12.0](https://github.com/ZeitOnline/estimation-station/compare/0.11.0...0.12.0) (2026-10-02)
 
 
