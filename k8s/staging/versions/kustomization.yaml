@@ -2,4 +2,4 @@ apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 images:
 - name: nodejs
-  newTag: 0.12.0-45-gc2d0f3e
+  newTag: 0.12.1-1-g0370c6f
