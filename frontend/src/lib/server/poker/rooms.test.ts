@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Card } from '../../../types';
+import { fromSeed } from '../../poker/avatar';
 import { DEFAULT_DECK, Rooms } from './rooms';
 
 describe('Rooms', () => {
@@ -145,5 +146,21 @@ describe('Rooms', () => {
 		rooms.get('r1')!.lastActivity = 0; // pretend it's old
 		rooms.sweep(Date.now(), 1000);
 		expect(rooms.get('r1')).toBe(null);
+	});
+
+	it('keeps a customised avatar across reconnects and lets you reset it', () => {
+		const rooms = new Rooms();
+		const avatar = fromSeed('Somebody else');
+		rooms.join('r1', 'alice', 'Alice', avatar);
+		rooms.join('r1', 'bob', 'Bob');
+		rooms.disconnect('r1', 'alice');
+		const room = rooms.join('r1', 'alice', 'Alice');
+		const seen = (id: string) =>
+			rooms.serialize(room, 'bob').participants.find((p) => p.userId === id)?.avatar;
+		expect(seen('alice')).toEqual(avatar);
+		expect(seen('bob')).toBeNull();
+
+		rooms.setAvatar('r1', 'alice', null);
+		expect(seen('alice')).toBeNull();
 	});
 });

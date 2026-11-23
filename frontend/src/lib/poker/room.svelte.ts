@@ -1,3 +1,4 @@
+import type { Avatar } from '#lib/poker/avatar.js';
 import { WS_PATH } from '#lib/poker/ws-path.js';
 import type { Card, RoomState } from '#types';
 import { browser } from '$app/env';
@@ -23,6 +24,7 @@ export function createRoom() {
 	let userId = '';
 	let name = '';
 	let token: string | null = null;
+	let avatar: Avatar | null = null;
 	let closedByUs = false;
 	let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -31,11 +33,18 @@ export function createRoom() {
 		connected: false,
 		error: null as string | null,
 
-		connect(rId: string, uId: string, nm: string, tk: string | null = null) {
+		connect(
+			rId: string,
+			uId: string,
+			nm: string,
+			tk: string | null = null,
+			av: Avatar | null = null
+		) {
 			roomId = rId;
 			userId = uId;
 			name = nm;
 			token = tk;
+			avatar = av;
 			closedByUs = false;
 			open();
 		},
@@ -54,6 +63,11 @@ export function createRoom() {
 		takeOver() {
 			send({ type: 'takeOver' });
 		},
+		/** Change your own avatar (null = back to the default for your name). */
+		setAvatar(av: Avatar | null) {
+			avatar = av; // also re-sent on reconnect
+			send({ type: 'setAvatar', avatar: av });
+		},
 		disconnect() {
 			closedByUs = true;
 			if (reconnectTimer) clearTimeout(reconnectTimer);
@@ -68,7 +82,7 @@ export function createRoom() {
 		socket.onopen = () => {
 			store.connected = true;
 			store.error = null;
-			send({ type: 'join', roomId, userId, name, token });
+			send({ type: 'join', roomId, userId, name, token, avatar });
 		};
 		socket.onmessage = (ev) => {
 			const msg = JSON.parse(ev.data);
