@@ -10,12 +10,13 @@
 //
 // Protocol (all JSON):
 //   client -> server:
-//     { type: 'join',      roomId, userId, name, token }  (must be first message)
+//     { type: 'join',      roomId, userId, name, token, avatar? }  (must be first message)
 //     { type: 'vote',      card }
 //     { type: 'reveal' }                                   (moderator only)
 //     { type: 'reset' }                                    (moderator only)
 //     { type: 'setTicket', title }                         (moderator only)
 //     { type: 'takeOver' }                                  (become the moderator)
+//     { type: 'setAvatar', avatar }                        (your own; null = default)
 //   server -> client:
 //     { type: 'state', room }                              (full room, per-recipient)
 //     { type: 'error', message }
@@ -29,6 +30,7 @@ import type { Duplex } from 'node:stream';
 import { type RawData, type WebSocket, WebSocketServer } from 'ws';
 import type { Card } from '../../../types';
 import { normalizeTicket } from '../../jira-link';
+import { sanitizeAvatar } from '../../poker/avatar';
 import { WS_PATH } from '../../poker/ws-path';
 import { type AuthPolicy, authorize, identityFromClaims, makeVerifier } from './auth';
 import { Rooms } from './rooms';
@@ -46,6 +48,7 @@ interface ClientMessage {
 	token?: string;
 	card?: Card;
 	title?: string;
+	avatar?: unknown;
 }
 
 // A socket carries the identity it established at `join`.
@@ -196,7 +199,9 @@ export function createWSSGlobalInstance(): WebSocketServer {
 					connections.set(ws.roomId, roomConnections);
 				}
 				roomConnections.add(ws);
-				rooms.join(ws.roomId, ws.userId, name);
+				// Avatars are purely cosmetic and client-owned (kept in the browser's
+				// localStorage); we only hold a validated copy for the room's lifetime.
+				rooms.join(ws.roomId, ws.userId, name, sanitizeAvatar(msg.avatar));
 				return broadcast(ws.roomId);
 			}
 
@@ -232,6 +237,10 @@ export function createWSSGlobalInstance(): WebSocketServer {
 					break;
 				case 'takeOver':
 					rooms.takeOver(ws.roomId, ws.userId);
+					break;
+				case 'setAvatar':
+					// Anything that doesn't validate (including null) resets to the default.
+					rooms.setAvatar(ws.roomId, ws.userId, sanitizeAvatar(msg.avatar));
 					break;
 				default:
 					return send(ws, {

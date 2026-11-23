@@ -11,6 +11,9 @@ anchoring" flow. Access is gated behind ZEIT SSO so only the team can join.
   **WebSocket** layer for live rooms, presence, voting, and reveal/reset. Light
   and dark themes, switchable in the room.
 - **Auth** — ZEIT SSO (Keycloak/OIDC), with an off/mock mode for local dev.
+- **Avatars** — everyone gets a cartoon avatar derived from their name; click
+  your own to customise it. Nothing is persisted server-side: the choice lives
+  in your browser's `localStorage` and is sent to the room on join.
 - **Jira** — type a ticket key/link into a room and it's previewed (title +
   description); on reveal, the moderator can write the estimate straight to
   the ticket's Story Points field and move it to "Refined".

@@ -1,3 +1,5 @@
+import type { Avatar } from '../lib/poker/avatar';
+
 // Card values in a deck. `?` means "no idea".
 export type Card = number | '?';
 
@@ -10,6 +12,8 @@ export interface Participant {
 	connected: boolean;
 	hasVoted: boolean;
 	vote: Card | null;
+	// A customised avatar, or null for the default one derived from `name`.
+	avatar: Avatar | null;
 }
 
 // The full room state pushed by the server on every change.

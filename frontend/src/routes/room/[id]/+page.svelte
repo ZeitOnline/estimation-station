@@ -1,9 +1,10 @@
 <script lang="ts">
 import { onDestroy, onMount, untrack } from 'svelte';
-import { Card, Icon, Participants } from '#components';
+import { AvatarEditor, Card, Icon, Participants } from '#components';
 import { authFetch, SessionExpiredError } from '#lib/auth-fetch.js';
 import { parseIssueKey } from '#lib/jira-link.js';
-import { getName, getToken, getUserId } from '#lib/poker/identity.js';
+import type { Avatar } from '#lib/poker/avatar.js';
+import { getName, getToken, getUserId, loadAvatar, saveAvatar } from '#lib/poker/identity.js';
 import { createRoom } from '#lib/poker/room.svelte.js';
 import { voteSummary } from '#lib/poker/summary.js';
 import {
@@ -26,6 +27,15 @@ const myVote = $derived(
 );
 const summary = $derived(room.state ? voteSummary(room.state.participants) : null);
 
+// Your own seat, for the avatar editor (opened by clicking your avatar).
+const me = $derived(room.state?.participants.find((p) => p.userId === getUserId()) ?? null);
+let editingAvatar = $state(false);
+
+function changeAvatar(avatar: Avatar | null) {
+	saveAvatar(avatar);
+	room.setAvatar(avatar);
+}
+
 onMount(() => {
 	const name = getName();
 	if (!name) {
@@ -33,7 +43,7 @@ onMount(() => {
 		goto(resolve('/'));
 		return;
 	}
-	room.connect(data.roomId, getUserId(), name, getToken());
+	room.connect(data.roomId, getUserId(), name, getToken(), loadAvatar());
 });
 
 onDestroy(() => {
@@ -313,7 +323,11 @@ function legacyCopy(text: string): boolean {
 						</span>
 					{/if}
 				</div>
-				<Participants room={room.state} />
+				<Participants
+					room={room.state}
+					selfId={getUserId()}
+					onEditAvatar={() => (editingAvatar = true)}
+				/>
 			</section>
 
 			{#if room.state.youAreModerator}
@@ -336,6 +350,15 @@ function legacyCopy(text: string): boolean {
 	</div>
 {:else}
 	<p>Verbinde mit dem Raum…</p>
+{/if}
+
+{#if editingAvatar && me}
+	<AvatarEditor
+		name={me.name}
+		avatar={me.avatar}
+		onchange={changeAvatar}
+		onclose={() => (editingAvatar = false)}
+	/>
 {/if}
 
 <style>

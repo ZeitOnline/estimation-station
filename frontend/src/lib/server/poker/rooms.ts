@@ -8,6 +8,7 @@
 // =============================================================================
 
 import type { Card, RoomState } from '../../../types';
+import type { Avatar } from '../../poker/avatar';
 
 // Fibonacci 1–13. No 0 and no '?': every card has to be a number the
 // team can actually commit to, and votes must stay in sync with the story
@@ -23,6 +24,8 @@ export interface Participant {
 	role: 'moderator' | 'voter' | 'observer';
 	vote: Card | null;
 	connected: boolean;
+	// Customised avatar (already validated by the caller); null = derive from name.
+	avatar: Avatar | null;
 }
 
 export interface Room {
@@ -41,8 +44,10 @@ export class Rooms {
 	/**
 	 * Join (or create) a room. First joiner of a fresh room becomes moderator.
 	 * Re-joining with the same userId keeps your identity and vote (reconnect).
+	 * `avatar` is whatever the client has stored for itself; `undefined` leaves
+	 * an existing one untouched.
 	 */
-	join(roomId: string, userId: string, name?: string): Room {
+	join(roomId: string, userId: string, name?: string, avatar?: Avatar | null): Room {
 		let room = this.rooms.get(roomId);
 		if (!room) {
 			room = {
@@ -61,13 +66,15 @@ export class Rooms {
 		if (existing) {
 			existing.connected = true;
 			if (name) existing.name = name;
+			if (avatar !== undefined) existing.avatar = avatar;
 		} else {
 			room.participants.set(userId, {
 				userId,
 				name: name || 'Anonym',
 				role: userId === room.moderatorId ? 'moderator' : 'voter',
 				vote: null,
-				connected: true
+				connected: true,
+				avatar: avatar ?? null
 			});
 		}
 		room.lastActivity = Date.now();
@@ -101,6 +108,16 @@ export class Rooms {
 			room.revealed = false;
 			for (const p of room.participants.values()) p.vote = null;
 		});
+	}
+
+	/** Change your own avatar; null goes back to the default derived from your name. */
+	setAvatar(roomId: string, userId: string, avatar: Avatar | null): Room | null {
+		const room = this.rooms.get(roomId);
+		if (!room) return null;
+		const p = room.participants.get(userId);
+		if (p) p.avatar = avatar;
+		room.lastActivity = Date.now();
+		return room;
 	}
 
 	/** Set (or, with an empty/null title, remove) the room's current ticket. */
@@ -171,7 +188,8 @@ export class Rooms {
 				role: p.role,
 				connected: p.connected,
 				hasVoted: p.vote !== null,
-				vote: room.revealed || p.userId === forUserId ? p.vote : null
+				vote: room.revealed || p.userId === forUserId ? p.vote : null,
+				avatar: p.avatar
 			}))
 		};
 	}

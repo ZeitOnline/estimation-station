@@ -1,4 +1,5 @@
 import { oidc } from '@zeitonline/svelte-oidc';
+import { type Avatar, sanitizeAvatar } from './avatar';
 
 // Identity comes from the OIDC session. The whole app is rendered behind the
 // login gate in +layout.svelte, so by the time these are called a user is
@@ -36,4 +37,26 @@ export function getName(): string {
 export function getToken(): string | null {
 	if (AUTH_MOCK) return null;
 	return oidc.accessToken;
+}
+
+// A customised avatar lives only in this browser's localStorage (keyed by
+// user, so mock tabs and shared machines don't mix) and is handed to the room
+// on join. No customisation stored = the default avatar derived from the name.
+const avatarKey = () => `poker.avatar.${getUserId()}`;
+
+export function loadAvatar(): Avatar | null {
+	try {
+		return sanitizeAvatar(JSON.parse(localStorage.getItem(avatarKey()) ?? 'null'));
+	} catch {
+		return null;
+	}
+}
+
+export function saveAvatar(avatar: Avatar | null): void {
+	try {
+		if (avatar) localStorage.setItem(avatarKey(), JSON.stringify(avatar));
+		else localStorage.removeItem(avatarKey());
+	} catch {
+		// storage blocked/full: the avatar still applies for this session
+	}
 }

@@ -8,7 +8,8 @@ const p = (userId: string, vote: Participant['vote']): Participant => ({
 	role: 'voter',
 	connected: true,
 	hasVoted: vote !== null,
-	vote
+	vote,
+	avatar: null
 });
 
 describe('voteSummary', () => {
