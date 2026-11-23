@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/ZeitOnline/estimation-station/compare/0.12.1...0.13.0) (2026-11-23)
+
+
+### Features
+
+* give every participant a cartoon avatar ([#99](https://github.com/ZeitOnline/estimation-station/issues/99)) ([4c70e5d](https://github.com/ZeitOnline/estimation-station/commit/4c70e5d72d4bb07e1b66f9d9529ce36ed1a9f1fa))
+
 ## [0.12.1](https://github.com/ZeitOnline/estimation-station/compare/0.12.0...0.12.1) (2026-10-22)
 
 
