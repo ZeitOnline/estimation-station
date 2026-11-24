@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/ZeitOnline/estimation-station/compare/0.13.1...0.13.2) (2026-11-24)
+
+
+### Bug Fixes
+
+* align the biome config schema with the locked version ([#103](https://github.com/ZeitOnline/estimation-station/issues/103)) ([e9649a7](https://github.com/ZeitOnline/estimation-station/commit/e9649a79212f0678f6a271590c7cd744cc9b1e8d))
+
 ## [0.13.1](https://github.com/ZeitOnline/estimation-station/compare/0.13.0...0.13.1) (2026-11-24)
 
 
