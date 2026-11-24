@@ -52,6 +52,11 @@ Keycloak client `estimation-station` against
 `frontend/src/routes/+layout.svelte`. Your dev/prod origin must be a registered
 redirect URI on that client.
 
+A stored session whose refresh token has expired can't be renewed. In that
+case the app asks Keycloak in a hidden iframe (`prompt=none`) whether the
+browser still has an SSO session — for example from another internal tool —
+and only shows the login button when it doesn't.
+
 Server-side, set `AUTH_MODE=oidc` (plain env, not `VITE_`) to also verify the
 bearer token on the WebSocket and enforce who may join (email domain /
 Keycloak group) — see `frontend/src/lib/server/poker/auth.ts`.

@@ -12,18 +12,70 @@ import type { LayoutData } from './$types';
 let { data, children }: { data: LayoutData; children: () => ReturnType<import('svelte').Snippet> } =
 	$props();
 
+// True until the stored session is restored or known to be gone — covers the
+// extra Keycloak check below, which runs after oidc.loading has gone false.
+let restoring = $state(!AUTH_MOCK);
+
+async function restoreSession() {
+	const url = window.location.href;
+	const params = new URLSearchParams(window.location.search);
+	// The hidden iframe of a silent (prompt=none) login loads this app too.
+	const inIframe = window.self !== window.top;
+
+	try {
+		await oidc.manage({
+			authority: 'https://openid.zeit.de/realms/zeit-online',
+			client_id: 'estimation-station',
+			redirect_uri: window.location.origin,
+			// localStorage instead of oidc-client-ts' default sessionStorage: the
+			// session then survives a reload and is shared across tabs, so opening a
+			// room link in a new tab doesn't ask for a login again (same as wally).
+			userStore: new WebStorageStateStore({ store: window.localStorage })
+		});
+	} catch (err) {
+		// The login callback failed (stale or foreign callback params). Strip
+		// them: oidc.login() uses the current URL as redirect_uri, so leftovers
+		// would make every further attempt fail the same way.
+		history.replaceState(null, '', window.location.pathname);
+		oidc.error = err instanceof Error ? err.message : String(err);
+		return;
+	}
+
+	if (inIframe) {
+		// Keycloak answered the silent login with an error (login_required).
+		// oidc.manage() only reports successful callbacks to the parent window,
+		// which would otherwise wait for its timeout — tell it right away.
+		if (params.has('error')) await oidc.manager?.signinSilentCallback(url);
+		return;
+	}
+	if (oidc.isAuthenticated || params.has('error')) return;
+
+	// Still logged out although a session is stored: its refresh token is dead.
+	// oidc-client-ts stops there, so ask Keycloak directly (prompt=none in a
+	// hidden iframe) whether this browser still has an SSO session — e.g. from
+	// logging in to another internal tool today. If so, nobody has to click.
+	const stale = await oidc.manager?.getUser();
+	if (!stale?.refresh_token) return; // without one, manage() already asked
+	try {
+		await oidc.manager?.signinSilent({
+			forceIframeAuth: true,
+			silentRequestTimeoutInSeconds: 5
+		});
+	} catch {
+		// No SSO session either: drop the dead one, so the next visit asks
+		// Keycloak straight away instead of trying the refresh token first.
+		await oidc.manager?.removeUser();
+	}
+	// A failed renewal just means "log in again" — not an error worth showing.
+	oidc.error = null;
+}
+
 onMount(() => {
 	// VITE_AUTH_MODE=mock: no real SSO — identity.ts fabricates a per-tab
 	// user and the login gate below is bypassed.
 	if (AUTH_MOCK) return;
-	oidc.manage({
-		authority: 'https://openid.zeit.de/realms/zeit-online',
-		client_id: 'estimation-station',
-		redirect_uri: window.location.origin,
-		// localStorage instead of oidc-client-ts' default sessionStorage: the
-		// session then survives a reload and is shared across tabs, so opening a
-		// room link in a new tab doesn't ask for a login again (same as wally).
-		userStore: new WebStorageStateStore({ store: window.localStorage })
+	restoreSession().finally(() => {
+		restoring = false;
 	});
 });
 </script>
@@ -43,7 +95,7 @@ onMount(() => {
 <div class="app">
 	{#if AUTH_MOCK || oidc.isAuthenticated}
 		{@render children()}
-	{:else if oidc.loading}
+	{:else if oidc.loading || restoring}
 		<!-- Restoring the stored session / renewing silently: don't flash the
 		     login gate at someone who is in fact logged in. -->
 		<p class="login__pending">Anmeldung wird geprüft…</p>
