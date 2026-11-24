@@ -12,19 +12,59 @@ import type { LayoutData } from './$types';
 let { data, children }: { data: LayoutData; children: () => ReturnType<import('svelte').Snippet> } =
 	$props();
 
+// `offline_access` makes Keycloak hand out an offline refresh token. A normal
+// refresh token dies with the SSO session (i.e. overnight), so the session
+// stored in localStorage could not be renewed the next morning and everyone
+// had to log in again daily. The offline token outlives the SSO session and
+// is renewed on every use, so a login now lasts as long as the tool is used
+// regularly (Keycloak's "Offline Session Idle", 30 days by default).
+const SCOPE = 'openid profile email';
+const OFFLINE_SCOPE = `${SCOPE} offline_access`;
+// Set when a login callback failed (e.g. the account lacks the offline_access
+// role): the next attempt in this tab falls back to a plain session rather
+// than locking the user out. sessionStorage, so an unrelated failure (a stale
+// callback URL) doesn't downgrade this browser for good.
+const NO_OFFLINE_KEY = 'poker.noOfflineAccess';
+
+function login() {
+	let offline = true;
+	try {
+		offline = !sessionStorage.getItem(NO_OFFLINE_KEY);
+	} catch {
+		// storage blocked: just try the offline login
+	}
+	// svelte-oidc pins the manager's scope, so it is overridden per request
+	// here instead of calling oidc.login().
+	return oidc.manager?.signinRedirect({
+		redirect_uri: window.location.href,
+		scope: offline ? OFFLINE_SCOPE : SCOPE
+	});
+}
+
 onMount(() => {
 	// VITE_AUTH_MODE=mock: no real SSO — identity.ts fabricates a per-tab
 	// user and the login gate below is bypassed.
 	if (AUTH_MOCK) return;
-	oidc.manage({
-		authority: 'https://openid.zeit.de/realms/zeit-online',
-		client_id: 'estimation-station',
-		redirect_uri: window.location.origin,
-		// localStorage instead of oidc-client-ts' default sessionStorage: the
-		// session then survives a reload and is shared across tabs, so opening a
-		// room link in a new tab doesn't ask for a login again (same as wally).
-		userStore: new WebStorageStateStore({ store: window.localStorage })
-	});
+	oidc
+		.manage({
+			authority: 'https://openid.zeit.de/realms/zeit-online',
+			client_id: 'estimation-station',
+			redirect_uri: window.location.origin,
+			// localStorage instead of oidc-client-ts' default sessionStorage: the
+			// session then survives a reload and is shared across tabs, so opening a
+			// room link in a new tab doesn't ask for a login again (same as wally).
+			userStore: new WebStorageStateStore({ store: window.localStorage })
+		})
+		.catch((err: unknown) => {
+			// The login callback failed (code exchange rejected).
+			try {
+				sessionStorage.setItem(NO_OFFLINE_KEY, '1');
+			} catch {
+				// storage blocked: nothing to remember
+			}
+			history.replaceState(null, '', window.location.pathname);
+			oidc.error = err instanceof Error ? err.message : String(err);
+		});
 });
 </script>
 
@@ -53,7 +93,7 @@ onMount(() => {
 			<p class="login__lead">
 				Dieses Tool ist nur für das Team. Bitte melde dich mit deinem ZEIT-Account an.
 			</p>
-			<button class="login__btn" onclick={oidc.login}>Mit ZEIT-Account anmelden</button>
+			<button class="login__btn" onclick={login}>Mit ZEIT-Account anmelden</button>
 			{#if oidc.error}<p class="login__error">{oidc.error}</p>{/if}
 		</section>
 	{/if}

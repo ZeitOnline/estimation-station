@@ -52,6 +52,11 @@ Keycloak client `estimation-station` against
 `frontend/src/routes/+layout.svelte`. Your dev/prod origin must be a registered
 redirect URI on that client.
 
+The login requests the `offline_access` scope. A normal refresh token ends with
+the Keycloak SSO session, which meant logging in again every morning; the
+offline token outlives that session and is renewed on each use, so a login
+lasts as long as the tool is used regularly (Keycloak's "Offline Session Idle").
+
 Server-side, set `AUTH_MODE=oidc` (plain env, not `VITE_`) to also verify the
 bearer token on the WebSocket and enforce who may join (email domain /
 Keycloak group) — see `frontend/src/lib/server/poker/auth.ts`.
