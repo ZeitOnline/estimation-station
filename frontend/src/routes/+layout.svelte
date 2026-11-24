@@ -12,37 +12,6 @@ import type { LayoutData } from './$types';
 let { data, children }: { data: LayoutData; children: () => ReturnType<import('svelte').Snippet> } =
 	$props();
 
-// `offline_access` makes Keycloak hand out an offline refresh token. A normal
-// refresh token dies with the SSO session (i.e. overnight), so the session
-// stored in localStorage could not be renewed the next morning and everyone
-// had to log in again daily. The offline token outlives the SSO session and
-// is renewed on every use, so a login now lasts as long as the tool is used
-// regularly (Keycloak's "Offline Session Idle", 30 days by default).
-const SCOPE = 'openid profile email';
-const OFFLINE_SCOPE = `${SCOPE} offline_access`;
-// Set when a login callback failed (e.g. the account lacks the offline_access
-// role): the next attempt in this tab falls back to a plain session rather
-// than locking the user out. sessionStorage, so an unrelated failure (a stale
-// callback URL) doesn't downgrade this browser for good.
-const NO_OFFLINE_KEY = 'poker.noOfflineAccess';
-
-function loginScope() {
-	try {
-		return sessionStorage.getItem(NO_OFFLINE_KEY) ? SCOPE : OFFLINE_SCOPE;
-	} catch {
-		return OFFLINE_SCOPE; // storage blocked: just try the offline login
-	}
-}
-
-function login() {
-	// svelte-oidc pins the manager's scope, so it is overridden per request
-	// here instead of calling oidc.login().
-	return oidc.manager?.signinRedirect({
-		redirect_uri: window.location.href,
-		scope: loginScope()
-	});
-}
-
 // True until the stored session is restored or known to be gone — covers the
 // extra Keycloak check below, which runs after oidc.loading has gone false.
 let restoring = $state(!AUTH_MOCK);
@@ -64,12 +33,9 @@ async function restoreSession() {
 			userStore: new WebStorageStateStore({ store: window.localStorage })
 		});
 	} catch (err) {
-		// The login callback failed (code exchange rejected).
-		try {
-			sessionStorage.setItem(NO_OFFLINE_KEY, '1');
-		} catch {
-			// storage blocked: nothing to remember
-		}
+		// The login callback failed (stale or foreign callback params). Strip
+		// them: oidc.login() uses the current URL as redirect_uri, so leftovers
+		// would make every further attempt fail the same way.
 		history.replaceState(null, '', window.location.pathname);
 		oidc.error = err instanceof Error ? err.message : String(err);
 		return;
@@ -93,7 +59,6 @@ async function restoreSession() {
 	try {
 		await oidc.manager?.signinSilent({
 			forceIframeAuth: true,
-			scope: loginScope(),
 			silentRequestTimeoutInSeconds: 5
 		});
 	} catch {
@@ -140,7 +105,7 @@ onMount(() => {
 			<p class="login__lead">
 				Dieses Tool ist nur für das Team. Bitte melde dich mit deinem ZEIT-Account an.
 			</p>
-			<button class="login__btn" onclick={login}>Mit ZEIT-Account anmelden</button>
+			<button class="login__btn" onclick={oidc.login}>Mit ZEIT-Account anmelden</button>
 			{#if oidc.error}<p class="login__error">{oidc.error}</p>{/if}
 		</section>
 	{/if}
