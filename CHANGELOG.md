@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/ZeitOnline/estimation-station/compare/0.13.0...0.13.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* skip the login when the SSO session is still alive ([#101](https://github.com/ZeitOnline/estimation-station/issues/101)) ([7241261](https://github.com/ZeitOnline/estimation-station/commit/7241261f84b8167c7d05e43f31e5825d77c66529))
+
 ## [0.13.0](https://github.com/ZeitOnline/estimation-station/compare/0.12.1...0.13.0) (2026-11-23)
 
 
