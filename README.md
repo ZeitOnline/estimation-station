@@ -57,6 +57,11 @@ the Keycloak SSO session, which meant logging in again every morning; the
 offline token outlives that session and is renewed on each use, so a login
 lasts as long as the tool is used regularly (Keycloak's "Offline Session Idle").
 
+If the stored session can't be renewed anyway, the app asks Keycloak in a
+hidden iframe (`prompt=none`) whether the browser still has an SSO session —
+for example from another internal tool — and only shows the login button when
+it doesn't.
+
 Server-side, set `AUTH_MODE=oidc` (plain env, not `VITE_`) to also verify the
 bearer token on the WebSocket and enforce who may join (email domain /
 Keycloak group) — see `frontend/src/lib/server/poker/auth.ts`.
