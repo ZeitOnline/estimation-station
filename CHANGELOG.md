@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0](https://github.com/ZeitOnline/estimation-station/compare/0.13.2...0.14.0) (2026-11-26)
+
+
+### Features
+
+* pick tickets from the Jira backlog and render their description ([#109](https://github.com/ZeitOnline/estimation-station/issues/109)) ([86c2c57](https://github.com/ZeitOnline/estimation-station/commit/86c2c573e087c4ce320a7b5317aaede12695d825))
+* redesign voting cards, participant seats and the reveal ([#111](https://github.com/ZeitOnline/estimation-station/issues/111)) ([de3a3bc](https://github.com/ZeitOnline/estimation-station/commit/de3a3bca3c640620f48aeeae5fd69160a0d4275f))
+
 ## [0.13.2](https://github.com/ZeitOnline/estimation-station/compare/0.13.1...0.13.2) (2026-11-24)
 
 
