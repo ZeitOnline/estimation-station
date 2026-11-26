@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
+	adfToHtml,
 	adfToText,
+	getBacklog,
 	getIssuePreview,
 	type JiraConfig,
 	JiraError,
@@ -251,6 +253,173 @@ describe('adfToText', () => {
 	});
 });
 
+describe('adfToHtml', () => {
+	const text = (t: string, marks?: unknown[]) => ({ type: 'text', text: t, marks });
+
+	it('keeps headings, lists, checklists and smart links', () => {
+		const adf = {
+			type: 'doc',
+			content: [
+				{ type: 'heading', attrs: { level: 2 }, content: [text('Todo')] },
+				{
+					type: 'paragraph',
+					content: [
+						text('analog zu '),
+						{ type: 'inlineCard', attrs: { url: 'https://x.atlassian.net/browse/ENG-550' } },
+						text(' mit '),
+						text('uuid', [{ type: 'code' }])
+					]
+				},
+				{
+					type: 'orderedList',
+					attrs: { order: 1 },
+					content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [text('eins')] }] }]
+				},
+				{
+					type: 'taskList',
+					content: [
+						{ type: 'taskItem', attrs: { state: 'TODO' }, content: [text('Ja')] },
+						{ type: 'taskItem', attrs: { state: 'DONE' }, content: [text('Nein')] }
+					]
+				}
+			]
+		};
+
+		expect(adfToHtml(adf)).toBe(
+			'<h4>Todo</h4>' +
+				'<p>analog zu <a href="https://x.atlassian.net/browse/ENG-550" target="_blank" rel="noopener noreferrer">ENG-550</a> mit <code>uuid</code></p>' +
+				'<ol><li><p>eins</p></li></ol>' +
+				'<ul class="adf-tasks">' +
+				'<li><input type="checkbox" disabled> <span>Ja</span></li>' +
+				'<li><input type="checkbox" disabled checked> <span>Nein</span></li>' +
+				'</ul>'
+		);
+	});
+
+	it('escapes ticket text and refuses non-http links', () => {
+		const adf = {
+			type: 'paragraph',
+			content: [
+				text('<img src=x onerror=alert(1)> & "more"'),
+				text('klick', [{ type: 'link', attrs: { href: 'javascript:alert(1)' } }]),
+				text('ok', [{ type: 'link', attrs: { href: 'https://zeit.de/?a="b"' } }])
+			]
+		};
+
+		expect(adfToHtml(adf)).toBe(
+			'<p>&lt;img src=x onerror=alert(1)&gt; &amp; &quot;more&quot;' +
+				'klick' +
+				'<a href="https://zeit.de/?a=&quot;b&quot;" target="_blank" rel="noopener noreferrer">ok</a></p>'
+		);
+	});
+
+	it('reduces unknown nodes to their text and ignores non-objects', () => {
+		expect(
+			adfToHtml({ type: 'expand', content: [{ type: 'paragraph', content: [text('x')] }] })
+		).toBe('<p>x</p>');
+		expect(adfToHtml({ type: 'mediaSingle', attrs: {} })).toBe('');
+		expect(adfToHtml(null)).toBe('');
+		expect(adfToHtml('plain')).toBe('');
+	});
+});
+
+describe('getBacklog', () => {
+	const cfg: JiraConfig = {
+		baseUrl: 'https://zeit-online.atlassian.net',
+		email: 'bot@zeit.de',
+		apiToken: 'secret',
+		storyPointsField: 'customfield_10001'
+	};
+
+	it('searches with the given JQL and keeps the order Jira returns', async () => {
+		let seenUrl = '';
+		let seenBody: unknown;
+		const fetchFn = (async (url: string | URL | Request, init?: RequestInit) => {
+			seenUrl = String(url);
+			seenBody = JSON.parse(String(init?.body));
+			return new Response(
+				JSON.stringify({
+					issues: [
+						{
+							key: 'ENG-2',
+							fields: { summary: 'Zweites zuerst', status: { name: 'Waiting for Ref' } }
+						},
+						{ key: 'ENG-1', fields: {} }
+					]
+				}),
+				{ status: 200 }
+			);
+		}) as typeof fetch;
+
+		const issues = await getBacklog(cfg, 'project = ENG ORDER BY Rank ASC', 25, fetchFn);
+
+		expect(seenUrl).toBe('https://zeit-online.atlassian.net/rest/api/3/search/jql');
+		expect(seenBody).toEqual({
+			jql: 'project = ENG ORDER BY Rank ASC',
+			maxResults: 25,
+			fields: ['summary', 'status']
+		});
+		expect(issues).toEqual([
+			{ key: 'ENG-2', summary: 'Zweites zuerst', status: 'Waiting for Ref' },
+			{ key: 'ENG-1', summary: '', status: '' }
+		]);
+	});
+
+	it('follows page tokens until the list is complete', async () => {
+		const tokens: unknown[] = [];
+		const fetchFn = (async (_url: string | URL | Request, init?: RequestInit) => {
+			const body = JSON.parse(String(init?.body));
+			tokens.push(body.nextPageToken);
+			const second = body.nextPageToken === 'page-2';
+			return new Response(
+				JSON.stringify({
+					issues: [{ key: second ? 'ENG-2' : 'ENG-1', fields: { summary: 's' } }],
+					...(second ? {} : { nextPageToken: 'page-2' })
+				}),
+				{ status: 200 }
+			);
+		}) as typeof fetch;
+
+		const issues = await getBacklog(cfg, 'project = ENG', 300, fetchFn);
+
+		expect(tokens).toEqual([undefined, 'page-2']);
+		expect(issues.map((i) => i.key)).toEqual(['ENG-1', 'ENG-2']);
+	});
+
+	it('stops at maxResults even when Jira has more pages', async () => {
+		let calls = 0;
+		const fetchFn = (async () => {
+			calls += 1;
+			return new Response(
+				JSON.stringify({
+					issues: [
+						{ key: `ENG-${calls}0`, fields: {} },
+						{ key: `ENG-${calls}1`, fields: {} }
+					],
+					nextPageToken: 'more'
+				}),
+				{ status: 200 }
+			);
+		}) as typeof fetch;
+
+		const issues = await getBacklog(cfg, 'project = ENG', 3, fetchFn);
+
+		expect(calls).toBe(2);
+		expect(issues).toHaveLength(3);
+	});
+
+	it('throws a JiraError for invalid JQL', async () => {
+		const fetchFn = (async () =>
+			new Response(JSON.stringify({ errorMessages: ['Error in the JQL Query'] }), {
+				status: 400
+			})) as typeof fetch;
+
+		const err = await getBacklog(cfg, 'nonsense', 50, fetchFn).catch((e) => e);
+		expect(err).toBeInstanceOf(JiraError);
+		expect(err.status).toBe(400);
+	});
+});
+
 describe('getIssuePreview', () => {
 	const cfg: JiraConfig = {
 		baseUrl: 'https://zeit-online.atlassian.net',
@@ -274,6 +443,7 @@ describe('getIssuePreview', () => {
 					key: 'ENG-958',
 					fields: {
 						summary: 'Freebie-Modal zeigen',
+						status: { name: 'Waiting for Ref' },
 						description: adf('Im Frontend fehlt das Modal.')
 					}
 				}),
@@ -284,12 +454,14 @@ describe('getIssuePreview', () => {
 		const preview = await getIssuePreview(cfg, 'ENG-958', ['description'], fetchFn);
 
 		expect(seenUrl).toBe(
-			'https://zeit-online.atlassian.net/rest/api/3/issue/ENG-958?fields=summary,description'
+			'https://zeit-online.atlassian.net/rest/api/3/issue/ENG-958?fields=summary,status,description'
 		);
 		expect(preview).toEqual({
 			key: 'ENG-958',
 			summary: 'Freebie-Modal zeigen',
-			description: 'Im Frontend fehlt das Modal.'
+			status: 'Waiting for Ref',
+			description: 'Im Frontend fehlt das Modal.',
+			descriptionHtml: '<p>Im Frontend fehlt das Modal.</p>'
 		});
 	});
 

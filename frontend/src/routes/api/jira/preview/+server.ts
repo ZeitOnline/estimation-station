@@ -22,9 +22,6 @@ import {
 } from '$app/env/private';
 import type { RequestHandler } from './$types';
 
-// Previews are teasers, not the full ticket — keep them scannable.
-const MAX_DESCRIPTION = 500;
-
 export const GET: RequestHandler = async ({ request, url }) => {
 	await requireApiUser(request);
 
@@ -49,12 +46,15 @@ export const GET: RequestHandler = async ({ request, url }) => {
 		.filter(Boolean);
 
 	try {
-		const preview = await getIssuePreview(cfg, issueKey, descriptionFields);
-		const description =
-			preview.description.length > MAX_DESCRIPTION
-				? `${preview.description.slice(0, MAX_DESCRIPTION)}…`
-				: preview.description;
-		return Response.json({ ok: true, key: preview.key, summary: preview.summary, description });
+		// descriptionHtml is built from escaped text and a fixed tag set (see
+		// adfToHtml), so the room page may inject it as-is. The full text is
+		// sent; the page caps the height and scrolls instead of cutting it.
+		const { key, summary, status, descriptionHtml } = await getIssuePreview(
+			cfg,
+			issueKey,
+			descriptionFields
+		);
+		return Response.json({ ok: true, key, summary, status, descriptionHtml });
 	} catch (err) {
 		if (err instanceof JiraError) {
 			error(err.status >= 400 && err.status < 500 ? err.status : 502, `Jira: ${err.message}`);
