@@ -32,6 +32,19 @@ spec:
               value: oidc
             - name: ALLOWED_EMAIL_DOMAINS
               value: zeit.de
+            # ENG keeps the ticket text in "Beschreibung ENG-Task" rather than
+            # the system description — without this the preview shows only
+            # the title.
+            - name: JIRA_DESCRIPTION_FIELDS
+              value: customfield_11371,description
+            # The tickets a room can pick from (searchable, one checkbox per
+            # status). Those in the default statuses are what the moderator
+            # steps through with the arrow keys; the first one is shown by
+            # default.
+            - name: JIRA_BACKLOG_JQL
+              value: project = ENG AND status in ("Waiting for Ref", Backlog) AND issuetype != Epic ORDER BY Rank ASC
+            - name: JIRA_BACKLOG_DEFAULT_STATUSES
+              value: Waiting for Ref
           resources:
             requests:
               cpu: "0.2"

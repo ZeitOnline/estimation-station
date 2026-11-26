@@ -116,7 +116,12 @@ export async function transitionTo(
 export interface IssuePreview {
 	key: string;
 	summary: string;
+	/** Workflow status name, e.g. "Waiting for Ref" (empty if Jira sent none). */
+	status: string;
+	/** Plain text of the description (empty when the ticket has none). */
 	description: string;
+	/** The same description as safe HTML, keeping headings, lists and links. */
+	descriptionHtml: string;
 }
 
 /**
@@ -136,6 +141,119 @@ export function adfToText(node: unknown): string {
 	return isBlock ? `${inner}\n` : inner;
 }
 
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;');
+}
+
+/** An `<a>` for http(s) URLs only — anything else (javascript:, data:) is dropped to its label. */
+function safeLink(url: unknown, labelHtml: string): string {
+	if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) return labelHtml;
+	return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${labelHtml}</a>`;
+}
+
+const MARK_TAGS: Record<string, string> = {
+	strong: 'strong',
+	em: 'em',
+	code: 'code',
+	strike: 's',
+	underline: 'u',
+	subsup: 'sub'
+};
+
+// Block nodes that map 1:1 onto an element.
+const BLOCK_TAGS: Record<string, string> = {
+	paragraph: 'p',
+	bulletList: 'ul',
+	listItem: 'li',
+	blockquote: 'blockquote',
+	panel: 'blockquote',
+	table: 'table',
+	tableRow: 'tr',
+	tableHeader: 'th',
+	tableCell: 'td'
+};
+
+/**
+ * HTML from an Atlassian Document Format tree, for the room's ticket preview.
+ *
+ * Safe to inject: the output is built from a fixed set of tags, every piece
+ * of ticket text is escaped, and links are limited to http(s). Structure the
+ * estimators need survives (headings, lists, checklists, links, inline code,
+ * tables); media and unknown nodes are reduced to whatever text they contain.
+ */
+export function adfToHtml(node: unknown): string {
+	if (!node || typeof node !== 'object') return '';
+	const n = node as {
+		type?: string;
+		text?: string;
+		content?: unknown[];
+		attrs?: Record<string, unknown>;
+		marks?: Array<{ type?: string; attrs?: Record<string, unknown> }>;
+	};
+	const attrs = n.attrs ?? {};
+	const inner = () => (n.content ?? []).map(adfToHtml).join('');
+
+	switch (n.type) {
+		case 'text': {
+			let html = escapeHtml(n.text ?? '');
+			for (const mark of n.marks ?? []) {
+				const tag = MARK_TAGS[mark.type ?? ''];
+				if (tag) html = `<${tag}>${html}</${tag}>`;
+				else if (mark.type === 'link') html = safeLink(mark.attrs?.href, html);
+			}
+			return html;
+		}
+		case 'hardBreak':
+			return '<br>';
+		case 'rule':
+			return '<hr>';
+		case 'heading': {
+			// The preview sits under the page's h1/h2 and its own title, so
+			// ticket headings start at h3.
+			const level = Math.min(6, Math.max(1, Number(attrs.level) || 1) + 2);
+			return `<h${level}>${inner()}</h${level}>`;
+		}
+		case 'orderedList': {
+			const start = Number(attrs.order);
+			return `<ol${Number.isInteger(start) && start > 1 ? ` start="${start}"` : ''}>${inner()}</ol>`;
+		}
+		case 'taskList':
+			return `<ul class="adf-tasks">${inner()}</ul>`;
+		case 'taskItem': {
+			const done = attrs.state === 'DONE';
+			return `<li><input type="checkbox" disabled${done ? ' checked' : ''}> <span>${inner()}</span></li>`;
+		}
+		case 'codeBlock':
+			return `<pre><code>${inner()}</code></pre>`;
+		case 'inlineCard':
+		case 'blockCard':
+		case 'embedCard': {
+			// A smart link carries only its URL; show the issue key for Jira
+			// links, the bare URL otherwise.
+			const url = typeof attrs.url === 'string' ? attrs.url : '';
+			const label = escapeHtml(url.match(/\/browse\/([A-Za-z][A-Za-z0-9]*-\d+)/)?.[1] ?? url);
+			return n.type === 'inlineCard' ? safeLink(url, label) : `<p>${safeLink(url, label)}</p>`;
+		}
+		case 'emoji':
+		case 'mention':
+		case 'status':
+			return escapeHtml(String(attrs.text ?? attrs.shortName ?? ''));
+		case 'date': {
+			const time = Number(attrs.timestamp);
+			return Number.isFinite(time) ? escapeHtml(new Date(time).toISOString().slice(0, 10)) : '';
+		}
+		default: {
+			const tag = BLOCK_TAGS[n.type ?? ''];
+			return tag ? `<${tag}>${inner()}</${tag}>` : inner();
+		}
+	}
+}
+
 /**
  * Fetch summary + description of one issue for the room preview. Some
  * projects keep their text in a custom field instead of `description`
@@ -148,7 +266,7 @@ export async function getIssuePreview(
 	descriptionFields: string[] = ['description'],
 	fetchFn: typeof fetch = fetch
 ): Promise<IssuePreview> {
-	const fields = ['summary', ...descriptionFields].join(',');
+	const fields = ['summary', 'status', ...descriptionFields].join(',');
 	const res = await fetchFn(`${cfg.baseUrl}/rest/api/3/issue/${issueKey}?fields=${fields}`, {
 		headers: headers(cfg)
 	});
@@ -156,15 +274,82 @@ export async function getIssuePreview(
 
 	const body: { key?: string; fields?: Record<string, unknown> } = await res.json();
 	const summary = typeof body.fields?.summary === 'string' ? body.fields.summary : '';
+	const statusName = (body.fields?.status as { name?: unknown } | undefined)?.name;
+	const status = typeof statusName === 'string' ? statusName : '';
 	let description = '';
+	let descriptionHtml = '';
 	for (const field of descriptionFields) {
 		const value = body.fields?.[field];
 		description = (typeof value === 'string' ? value : adfToText(value))
 			.replace(/\n{3,}/g, '\n\n')
 			.trim();
-		if (description) break;
+		if (!description) continue;
+		// Plain-string fields have no structure beyond their line breaks.
+		descriptionHtml =
+			typeof value === 'string'
+				? `<p>${escapeHtml(description).replace(/\n/g, '<br>')}</p>`
+				: adfToHtml(value);
+		break;
 	}
-	return { key: body.key ?? issueKey, summary, description };
+	return { key: body.key ?? issueKey, summary, status, description, descriptionHtml };
+}
+
+export interface BacklogIssue {
+	key: string;
+	summary: string;
+	/** Workflow status name, e.g. "Waiting for Ref" — the room filters on it. */
+	status: string;
+}
+
+// Jira caps a search page at 100 issues once fields are requested.
+const SEARCH_PAGE_SIZE = 100;
+
+/**
+ * The tickets a room steps through, in the order of `jql` (which should carry
+ * its own ORDER BY — `Rank ASC` mirrors the board). Only key, summary and
+ * status: the text of the ticket being shown comes from getIssuePreview.
+ * Follows Jira's page tokens until the list is complete or `maxResults` long.
+ */
+export async function getBacklog(
+	cfg: JiraConfig,
+	jql: string,
+	maxResults = 300,
+	fetchFn: typeof fetch = fetch
+): Promise<BacklogIssue[]> {
+	const issues: BacklogIssue[] = [];
+	let nextPageToken: string | undefined;
+	do {
+		const res = await fetchFn(`${cfg.baseUrl}/rest/api/3/search/jql`, {
+			method: 'POST',
+			headers: headers(cfg),
+			body: JSON.stringify({
+				jql,
+				maxResults: Math.min(SEARCH_PAGE_SIZE, maxResults - issues.length),
+				fields: ['summary', 'status'],
+				...(nextPageToken ? { nextPageToken } : {})
+			})
+		});
+		if (!res.ok) throw new JiraError(await errorMessage(res), res.status);
+
+		const body: {
+			issues?: Array<{
+				key?: string;
+				fields?: { summary?: unknown; status?: { name?: unknown } };
+			}>;
+			nextPageToken?: string;
+		} = await res.json();
+		for (const issue of body.issues ?? []) {
+			if (!issue.key) continue;
+			issues.push({
+				key: issue.key,
+				summary: typeof issue.fields?.summary === 'string' ? issue.fields.summary : '',
+				status: typeof issue.fields?.status?.name === 'string' ? issue.fields.status.name : ''
+			});
+		}
+		// An empty page with a token would loop forever — treat it as the end.
+		nextPageToken = body.issues?.length ? body.nextPageToken : undefined;
+	} while (nextPageToken && issues.length < maxResults);
+	return issues.slice(0, maxResults);
 }
 
 // Jira error bodies look like { errorMessages: [...], errors: { field: msg } }.

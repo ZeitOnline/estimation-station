@@ -67,13 +67,19 @@ Optional and off by default. Set `JIRA_BASE_URL`, `JIRA_EMAIL`,
 `JIRA_API_TOKEN`, and `JIRA_STORY_POINTS_FIELD` (the ticket's per-instance
 Story Points custom field) to turn it on — without all four, the endpoints
 answer `503`. See `frontend/.env.example` for the full list, including the
-optional `JIRA_REFINED_STATUS` and `JIRA_DESCRIPTION_FIELDS`.
+optional `JIRA_REFINED_STATUS`, `JIRA_DESCRIPTION_FIELDS`, `JIRA_BACKLOG_JQL` and
+`JIRA_BACKLOG_DEFAULT_STATUSES`.
 
 Once configured:
 
 - Typing a ticket key or browse link into a room fetches a **preview**
   (`GET /api/jira/preview`) — summary + description — so everyone can see
   what's being estimated.
+- With `JIRA_BACKLOG_JQL` set, a room **starts on the first backlog ticket**
+  (`GET /api/jira/backlog`) and the moderator steps through the rest with the
+  ← / → keys or the buttons next to the ticket. Checkboxes pick which workflow
+  statuses are stepped through (`JIRA_BACKLOG_DEFAULT_STATUSES` start ticked),
+  and a search field finds any ticket of the query by key or title.
 - On reveal, the moderator can **write the estimate** back
   (`POST /api/jira/story-points`), which also tries to transition the issue to
   a "Refined" workflow status.

@@ -15,6 +15,8 @@ export const variables = defineEnvVars({
 	JIRA_STORY_POINTS_FIELD: optional,
 	JIRA_REFINED_STATUS: optional,
 	JIRA_DESCRIPTION_FIELDS: optional,
+	JIRA_BACKLOG_JQL: optional,
+	JIRA_BACKLOG_DEFAULT_STATUSES: optional,
 	AUTH_MODE: optional,
 	OIDC_ISSUER: optional,
 	OIDC_JWKS_URL: optional,
