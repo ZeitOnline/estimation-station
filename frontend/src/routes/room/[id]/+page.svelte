@@ -1,6 +1,6 @@
 <script lang="ts">
 import { onDestroy, onMount, untrack } from 'svelte';
-import { AvatarEditor, Card, Icon, Participants } from '#components';
+import { AvatarEditor, Card, Icon, Participants, Results } from '#components';
 import { authFetch, SessionExpiredError } from '#lib/auth-fetch.js';
 import { parseIssueKey } from '#lib/jira-link.js';
 import type { Avatar } from '#lib/poker/avatar.js';
@@ -26,6 +26,15 @@ const myVote = $derived(
 	room.state?.participants.find((p) => p.userId === getUserId())?.vote ?? null
 );
 const summary = $derived(room.state ? voteSummary(room.state.participants) : null);
+// Progress of the running round: who has put a card down so far.
+const votedCount = $derived(room.state?.participants.filter((p) => p.hasVoted).length ?? 0);
+
+// The deck is held like a hand of cards: each one tilts a little further from
+// the middle and sits a little lower, so the row forms a shallow arc.
+function fan(index: number, total: number) {
+	const offset = index - (total - 1) / 2;
+	return { tilt: offset * 3, drop: offset * offset * 1.2 };
+}
 
 // Your own seat, for the avatar editor (opened by clicking your avatar).
 const me = $derived(room.state?.participants.find((p) => p.userId === getUserId()) ?? null);
@@ -529,19 +538,32 @@ function legacyCopy(text: string): boolean {
 			<section class="deck">
 				<h2>Wähle deine Schätzung…</h2>
 				<div class="cards">
-					{#each room.state.deck as value (value)}
-						<Card {value} selected={myVote === value} onpick={(v: CardType) => room.vote(v)} />
+					{#each room.state.deck as value, i (value)}
+						<Card
+							{value}
+							{...fan(i, room.state.deck.length)}
+							selected={myVote === value}
+							onpick={(v: CardType) => room.vote(v)}
+						/>
 					{/each}
 				</div>
 			</section>
 
+			{#if room.state.revealed && summary}
+				<Results room={room.state} {summary} />
+			{/if}
+
 			<section class="table">
 				<div class="table__head">
 					<span>Teilnehmer</span>
-					{#if room.state.revealed && summary}
-						<span class="summary">
-							Ø {summary.average ?? '–'}
-							{#if summary.consensus}· Einigkeit 🎉{/if}
+					{#if !room.state.revealed}
+						<span class="progress">
+							{votedCount} von {room.state.participants.length} haben geschätzt
+							<span class="progress__pips" aria-hidden="true">
+								{#each room.state.participants as _, i (i)}
+									<i class:on={i < votedCount}></i>
+								{/each}
+							</span>
 						</span>
 					{/if}
 				</div>
@@ -559,6 +581,11 @@ function legacyCopy(text: string): boolean {
 					</button>
 					<button onclick={() => room.reveal()} disabled={room.state.revealed}>
 						<Icon name="search" size={16} /> Aufdecken
+						{#if !room.state.revealed}
+							<span class="controls__count">
+								{votedCount} / {room.state.participants.length}
+							</span>
+						{/if}
 					</button>
 				</section>
 			{:else}
@@ -671,30 +698,63 @@ function legacyCopy(text: string): boolean {
 			top: var(--z-ds-space-m, 1rem);
 		}
 	}
-	.deck {
-		margin-bottom: var(--z-ds-space-xl, 2rem);
+	/* The voting column is a stack of sections with one rhythm. */
+	.vote-col {
+		display: flex;
+		flex-direction: column;
+		gap: var(--z-ds-space-xl, 2rem);
 	}
+	/* The hand of cards. Top padding is headroom for the picked card, which
+	   lifts out of the row; the side padding keeps the tilted outer cards
+	   inside the column. */
 	.cards {
 		display: flex;
 		flex-wrap: wrap;
-		gap: var(--z-ds-space-m, 1rem);
-		margin-top: var(--z-ds-space-m, 1rem);
+		gap: var(--z-ds-space-m, 1rem) var(--z-ds-space-xs, 0.5rem);
+		padding: var(--z-ds-space-l, 1.5rem) var(--z-ds-space-xs, 0.5rem) var(--z-ds-space-xs, 0.5rem);
 	}
 	.table__head {
 		display: flex;
+		flex-wrap: wrap;
 		justify-content: space-between;
-		align-items: baseline;
-		margin-bottom: var(--z-ds-space-s, 0.75rem);
+		align-items: center;
+		gap: var(--z-ds-space-xs, 0.5rem) var(--z-ds-space-s, 0.75rem);
+		margin-bottom: var(--z-ds-space-m, 1rem);
 		font-weight: 600;
 	}
-	.summary {
+	.progress {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--z-ds-space-xs, 0.5rem);
+		font-size: var(--z-ds-font-size-s, 0.875rem);
 		font-weight: 400;
 		color: var(--z-ds-color-text-70, #444444);
+	}
+	/* One pip per participant, filled as the cards come in. */
+	.progress__pips {
+		display: inline-flex;
+		gap: 3px;
+	}
+	.progress__pips i {
+		width: 9px;
+		height: 13px;
+		border: 1.5px solid var(--z-ds-color-text-40, #999999);
+		border-radius: 3px;
+	}
+	.progress__pips i.on {
+		border-color: var(--z-ds-color-text-100, #252525);
+		background: var(--z-ds-color-text-100, #252525);
+	}
+	.controls__count {
+		padding: 0.1rem 0.5rem;
+		border-radius: 999px;
+		background: rgba(var(--z-ds-color-background-0--rgb, 255, 255, 255), 0.18);
+		font-size: var(--z-ds-font-size-s, 0.875rem);
+		font-variant-numeric: tabular-nums;
 	}
 	.controls {
 		display: flex;
 		gap: var(--z-ds-space-s, 0.75rem);
-		margin-top: var(--z-ds-space-xl, 2rem);
 	}
 	.controls button,
 	.jira button {
